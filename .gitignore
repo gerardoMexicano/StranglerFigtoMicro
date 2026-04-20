@@ -1,0 +1,117 @@
+# ==============================================================================
+# LABORATORY GITIGNORE: .NET (Framework & Core), Angular, Docker, Nginx
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. VISUAL STUDIO, RIDER & IDEs
+# ------------------------------------------------------------------------------
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vcxproj.filters
+*.resharper
+*.resharper.user
+_ReSharper.*/
+
+# ------------------------------------------------------------------------------
+# 2. .NET CORE & .NET FRAMEWORK 
+# ------------------------------------------------------------------------------
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Testing
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.testsettings
+
+# NuGet Packages
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+.nuget/
+
+# Publish output
+publish/
+PublishProfiles/
+
+# AppSettings (Secrets)
+appsettings.Development.json
+appsettings.Local.json
+
+# ------------------------------------------------------------------------------
+# 3. NODE.JS & ANGULAR
+# ------------------------------------------------------------------------------
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Angular build output
+dist/
+tmp/
+out-tsc/
+bazel-out/
+.angular/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Coverage & Tests
+coverage/
+*.lcov
+
+# ------------------------------------------------------------------------------
+# 4. OS SPECIFIC FILES
+# ------------------------------------------------------------------------------
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Linux
+*~
+.directory
+
+# ------------------------------------------------------------------------------
+# 5. DOCKER & NGINX (Future)
+# ------------------------------------------------------------------------------
+# Temporary docker files / mounts (Adjust as necessary when configuring)
+.docker/
+docker-compose.override.yml
+
+# ------------------------------------------------------------------------------
+# 6. OTHERS
+# ------------------------------------------------------------------------------
+# Folders specified in project
+fakeData/
+temporal/
