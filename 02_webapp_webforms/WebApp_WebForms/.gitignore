@@ -1,0 +1,117 @@
+# Archivos específicos de Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vs/
+.vs/
+
+# Archivos de compilación
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
+*.pdb
+*.xml
+*.cache
+*.log
+
+# Archivos de WebForms específicos
+*.aspx.cs?  # .aspx.vb (archivos code-behind compilados)
+*.designer.vb
+*.resx
+*.resources
+
+# Archivos de paquetes NuGet
+packages/
+*.nupkg
+*.nuspec
+packages.config
+
+# Archivos temporales de IIS Express
+.vs/config/
+.vs/slnx/
+.vs/ProjectSettings.json
+
+# Archivos de publicación
+app.Publish/
+Properties/PublishProfiles/
+*.pubxml
+*.pubxml.user
+
+# Archivos de usuario de Visual Studio
+*.vbproj.user
+*.csproj.user
+*.vcxproj.user
+
+# Archivos de caché de ReSharper
+_Resharper*/
+*.ReSharper*/
+[Oo]bj/
+
+# Archivos de Test
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Archivos de log y temp
+*.log
+*.tmp
+*.temp
+*.cache
+*.vspscc
+*.vssscc
+
+# Archivos de base de datos local
+*.mdf
+*.ldf
+*.sdf
+*.db
+
+# Archivos de configuración con secretos (si los tienes)
+web.config.user
+appsettings.Development.json
+appsettings.Production.json
+connectionStrings.config
+
+# Archivos de Azure
+*.publishsettings
+*.pubxml.user
+*.azurePubxml
+
+# Archivos de Docker
+Dockerfile.*
+.dockerignore
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Carpeta de respaldos
+backup/
+Backup/
+*.bak
+
+# Archivos de rendimiento
+*.psess
+*.vsp
+*.psess
+*.vspx
+*.sap
+
+# Archivos de herramientas
+_ReSharper*/
+[Rr]e[Ss]harp*/
+[Rr]e[Ss]harp*
+[Tt]eam[Cc]ity/
+
+# Archivos de publicación web
+[Pp]ublish/
+[Cc]ompiled/
+[Pp]re[Cc]ompiledWeb/

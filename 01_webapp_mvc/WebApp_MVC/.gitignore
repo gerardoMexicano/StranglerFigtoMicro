@@ -1,0 +1,177 @@
+# Archivos específicos de Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vs/
+.vs/
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Archivos de compilación
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
+*.pdb
+*.xml
+*.cache
+*.log
+*.ncrunchsolution
+*.pidb
+*.scc
+
+# Archivos de paquetes NuGet
+packages/
+*.nupkg
+*.nuspec
+packages.config
+project.lock.json
+project.assets.json
+
+# Archivos de publicación
+[Pp]ublish/
+[Cc]ompiled/
+[Pp]re[Cc]ompiledWeb/
+*.pubxml
+*.pubxml.user
+*.azurePubxml
+app.Publish/
+
+# Archivos de usuario de Visual Studio
+*.csproj.user
+*.vbproj.user
+*.vcxproj.user
+*.dbproj.user
+
+# Archivos de caché de ReSharper
+_Resharper*/
+*.ReSharper*/
+[Rr]e[Ss]harp*/
+[Rr]e[Ss]harp.user
+[Tt]eam[Cc]ity/
+
+# Archivos de Test
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.coverageanalyzer
+*.testsettings
+
+# Archivos de log y temp
+*.log
+*.tmp
+*.temp
+*.cache
+*.vspscc
+*.vssscc
+*.dump
+*.rpt
+
+# Archivos de base de datos local
+*.mdf
+*.ldf
+*.sdf
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de configuración (con secretos)
+web.config.user
+web.config.*.config
+!web.config
+appsettings.Development.json
+appsettings.Production.json
+connectionStrings.config
+*.secrets.config
+
+# Archivos de Entity Framework
+*.edmx.diagram
+*.edmx
+*.dbmdl
+*.jfm
+*.v7
+
+# Archivos de Azure
+*.publishsettings
+*.pubxml.user
+*.azurePubxml
+ServiceConfiguration.Local.csfx
+ServiceConfiguration.Cloud.csfx
+
+# Archivos de Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+$RECYCLE.BIN/
+
+# Archivos de herramientas
+*.ncrunchsolution
+*.ncrunchproject
+*.dotCover
+*.dotSettings
+*.DotSettings.user
+*.wixpdb
+*.wixobj
+
+# Archivos de perfilado
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.session
+
+# Archivos de publicación web
+_ReSharper*/
+_UpgradeReport_Files/
+Backup*/
+UpgradeLog*.htm
+
+# Archivos de compilación de MSBuild
+*.lastbuildstate
+*.log
+*.metaproj
+*.metaproj.tmp
+
+# Archivos de StyleCop
+StyleCopReport.xml
+
+# Archivos de NuGet local
+.nuget/
+nuget.exe
+
+# Archivos de Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Archivos de JetBrains Rider
+.idea/
+*.sln.iml
+
+# Archivos de certificados
+*.pfx
+*.p12
+*.snk
+*.key
+
+# Archivos de Node.js (si usas herramientas frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Archivos de client-side (bundles generados)
+Scripts/_references.js
+Content/Site.css.map

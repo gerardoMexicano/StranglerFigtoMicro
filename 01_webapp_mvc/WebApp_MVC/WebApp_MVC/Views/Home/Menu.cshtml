@@ -1,0 +1,50 @@
+@{
+    ViewBag.Title = "Menú Principal";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<div class="row">
+    <div class="col-md-12 text-center mt-4">
+        <h2>Bienvenido al Menú Principal</h2>
+        <p class="lead">Seleccione una de las siguientes opciones:</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Página Antigua</h5>
+                <p class="card-text">Sistema anterior sin modificaciones.</p>
+                @Html.ActionLink("Ir a Página Antigua", "PaginaAntigua", "Home", new { @class = "btn btn-primary" })
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Página Antigua (Nuevo Backend)</h5>
+                <p class="card-text">Sistema anterior usando el nuevo backend.</p>
+                @Html.ActionLink("Ir a Backend Nuevo", "PaginaAntiguaNuevoBackend", "Home", new { @class = "btn btn-primary" })
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Página en Angular</h5>
+                <p class="card-text">Nuevo módulo desarrollado en Angular.</p>
+                @Html.ActionLink("Ir a Angular", "PaginaAngular", "Home", new { @class = "btn btn-primary" })
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Página Principal</h5>
+                <p class="card-text">Redirige nuevamente a este menú.</p>
+                @Html.ActionLink("Ir a Página Principal", "PaginaPrincipal", "Home", new { @class = "btn btn-primary" })
+            </div>
+        </div>
+    </div>
+</div>

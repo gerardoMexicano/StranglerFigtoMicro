@@ -1,0 +1,15 @@
+@{
+    ViewBag.Title = "Página Antigua con Nuevo Backend";
+    Layout = "~/Views/Shared/_LayoutProtected.cshtml";
+}
+
+<div class="row">
+    <div class="col-md-12 text-center mt-4">
+        <h2>@ViewBag.Title</h2>
+        <p class="lead">Esta es la vista de la página antigua, pero consumiendo servicios del nuevo backend.</p>
+        
+        <div class="alert alert-success mt-4" role="alert">
+            Contenido cargado desde la nueva API.
+        </div>
+    </div>
+</div>
