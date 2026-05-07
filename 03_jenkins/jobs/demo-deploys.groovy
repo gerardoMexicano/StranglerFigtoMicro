@@ -1,4 +1,4 @@
-pipeline {
+pipelineJob('demo-deploy'){
     agent any
     triggers {
         cron('H/2 * * * *')

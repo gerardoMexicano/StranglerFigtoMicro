@@ -1,4 +1,4 @@
-pipeline {
+pipelineJob('saludo-job') {
     agent any
     
     stages {
