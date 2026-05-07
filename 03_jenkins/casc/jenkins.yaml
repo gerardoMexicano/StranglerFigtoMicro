@@ -10,5 +10,6 @@ jenkins:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
 jobs:
-  - file: /var/jenkins_home/jobs/demo-deploys.groovy
-  - file: /var/jenkins_home/jobs/saludo-job.groovy
+  - file: /var/jenkins_home/jobsasc/porfinjala.groovy
+  - file: /var/jenkins_home/jobsasc/demoasc.groovy
+  - file: /var/jenkins_home/jobsasc/saludoasc.groovy

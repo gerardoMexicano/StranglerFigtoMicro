@@ -26,6 +26,8 @@ ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
 
 COPY casc/jenkins.yaml /usr/share/jenkins/ref/casc_configs/jenkins.yaml
 
+COPY jobsasc/ /usr/share/jenkins/ref/jobsasc/
+
 COPY jobs/ /usr/share/jenkins/ref/jobs/
 
 ENV CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/jenkins.yaml
