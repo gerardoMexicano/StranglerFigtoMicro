@@ -1,21 +1,21 @@
 pipelineJob('mi-job-ejemplo') {
-    description('Job creado correctamente con JCasC')
+    description('Job de ejemplo - creado automáticamente vía JCasC + Job DSL')
     definition {
         cps {
-            // Fíjate en las tres comillas simples (''') que envuelven el pipeline
             script('''
                 pipeline {
-                    agent any
+                    // Corre en el nodo maestro (built-in)
+                    agent { label 'built-in' }
                     stages {
                         stage('Hola Mundo') {
                             steps {
-                                echo '¡Por fin funcionó!'
+                                echo '¡Por fin funcionó! Jenkins automatizado al 100%'
                             }
                         }
                     }
                 }
             '''.stripIndent())
-            sandbox() // Importante para que no pida aprobación manual de scripts
+            sandbox(true)
         }
     }
 }

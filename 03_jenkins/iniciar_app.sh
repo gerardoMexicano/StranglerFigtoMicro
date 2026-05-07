@@ -6,7 +6,7 @@ echo "Iniciando el despliegue del proyecto..."
 docker compose down -v
 
 # Levantar el entorno en modo desatendido
-docker compose up -d
+docker compose up -d --build
 
 echo "El proyecto se ha levantado correctamente."
 echo "Accediendo a los logs iniciales..."

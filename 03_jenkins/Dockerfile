@@ -18,16 +18,15 @@ USER jenkins
 
 # Instalar plugins
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
-
 RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins.txt
 
 # Desactivar el asistente de configuración inicial
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
 
+# Configuración JCasC (admin, agentes, jobs)
 COPY casc/jenkins.yaml /usr/share/jenkins/ref/casc_configs/jenkins.yaml
 
+# Scripts Job DSL para crear los jobs automáticamente
 COPY jobsasc/ /usr/share/jenkins/ref/jobsasc/
-
-COPY jobs/ /usr/share/jenkins/ref/jobs/
 
 ENV CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/jenkins.yaml
