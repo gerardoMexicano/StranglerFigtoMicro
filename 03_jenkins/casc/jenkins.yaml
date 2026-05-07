@@ -9,3 +9,6 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
+jobs:
+  - file: /var/jenkins_home/jobs/demo-deploys.groovy
+  - file: /var/jenkins_home/jobs/saludo-job.groovy
