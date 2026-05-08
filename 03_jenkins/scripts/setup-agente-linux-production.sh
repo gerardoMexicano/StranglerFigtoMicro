@@ -37,8 +37,8 @@ info "=== Paso 1: Verificando Java ==="
 
 install_java() {
     if   command -v apt-get &>/dev/null; then
-        sudo apt-get update -qq && sudo apt-get install default-jdk
-    elif command -v dnf     &>/dev/null; then
+        sudo apt-get update -qq && sudo        sudo apt-get update -qq && sudo apt-get install default-jdk
+ then
         sudo dnf install -y "java-${JAVA_MIN_VERSION}-openjdk-headless"
     elif command -v yum     &>/dev/null; then
         sudo yum install -y "java-${JAVA_MIN_VERSION}-openjdk-headless"
@@ -71,6 +71,19 @@ if ! id -u jenkins &>/dev/null; then
 else
     success "Usuario 'jenkins' ya existe"
 fi
+
+# --- NUEVA SECCIÓN PARA DOCKER ---
+if command -v docker &>/dev/null; then
+    info "Configurando permisos de Docker para el agente..."
+    # Crear el grupo docker si no existe
+    sudo groupadd -f docker
+    # Agregar el usuario jenkins al grupo docker
+    sudo usermod -aG docker jenkins
+    success "Usuario 'jenkins' agregado al grupo 'docker'"
+else
+    warn "Docker no está instalado en este sistema. El agente no podrá levantar contenedores hasta que lo instales."
+fi
+# ---------------------------------
 
 sudo mkdir -p "${REMOTE_FS}/remoting"
 sudo chown -R jenkins:jenkins "$REMOTE_FS"
@@ -190,7 +203,17 @@ ExecStart=/usr/bin/java \
     -secret ${JENKINS_SECRET} \
     -name ${AGENT_NAME} \
     -workDir ${REMOTE_FS}
-
+# --- SEGURIDAD Y RESTRICCIONES ---
+# Impide que el proceso vea o modifique carpetas sensibles como /boot, /etc, /root
+ProtectSystem=full
+# Prohíbe al agente ganar nuevos privilegios (no podrá usar sudo aunque lo intente)
+NoNewPrivileges=true
+# Crea un /tmp y /var/tmp privado para que no interfiera con otros procesos del sistema
+PrivateTmp=true
+# Impide que el agente acceda a los directorios de otros usuarios en /home
+ProtectHome=read-only
+# Permite escritura solo en su propia casa (donde están los repos y archivos .env)
+ReadWritePaths=/home/jenkins
 Restart=always
 RestartSec=30
 StartLimitIntervalSec=300
