@@ -143,15 +143,16 @@ for i in {1..10}; do
     JNLP_RESPONSE=$(curl -fsSL \
         -u "${JENKINS_USER}:${JENKINS_TOKEN}" \
         "${JENKINS_URL}/computer/${AGENT_NAME}/slave-agent.jnlp" 2>/dev/null) || true
-
-    JENKINS_SECRET=$(echo "$JNLP_RESPONSE" | grep -oP '(?<=-secret )[a-f0-9]{64}' | head -1)
-
+ 
+    # El secret es el primer argumento de 64 chars hex en el XML del jnlp
+    JENKINS_SECRET=$(echo "$JNLP_RESPONSE" | grep -oP '(?<=<argument>)[a-f0-9]{64}(?=</argument>)' | head -1)
+ 
     [[ -n "$JENKINS_SECRET" ]] && { success "Secret obtenido"; break; }
-
+ 
     warn "Intento ${i}/10 — esperando que Jenkins genere el secret (3s)..."
     sleep 3
 done
-
+ 
 [[ -z "$JENKINS_SECRET" ]] && \
     error "No se pudo obtener el secret. Verifica que '${JENKINS_USER}' tenga permiso 'Agent/Connect'."
 
