@@ -22,8 +22,8 @@ jenkins:
   # ─────────────────────────────────────────────
   nodes:
     - permanent:
-        name: "agente-linux-01"
-        labelString: "linux docker"
+        name: "agente-linux-production"
+        labelString: "linux production"
         remoteFS: "/home/jenkins"
         numExecutors: 2
         mode: EXCLUSIVE
@@ -36,8 +36,8 @@ jenkins:
               internalDir: "remoting"
 
     - permanent:
-        name: "agente-linux-02"
-        labelString: "linux build"
+        name: "agente-linux-testing"
+        labelString: "linux testing"
         remoteFS: "/home/jenkins"
         numExecutors: 2
         mode: EXCLUSIVE

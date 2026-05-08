@@ -37,7 +37,7 @@ info "=== Paso 1: Verificando Java ==="
 
 install_java() {
     if   command -v apt-get &>/dev/null; then
-        sudo apt-get update -qq && sudo apt-get install -y "openjdk-${JAVA_MIN_VERSION}-jre-headless"
+        sudo apt-get update -qq && sudo apt-get install default-jdk
     elif command -v dnf     &>/dev/null; then
         sudo dnf install -y "java-${JAVA_MIN_VERSION}-openjdk-headless"
     elif command -v yum     &>/dev/null; then
