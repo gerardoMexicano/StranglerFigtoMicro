@@ -2,7 +2,7 @@
     ViewBag.Title = "Menú Principal";
     Layout = "~/Views/Shared/_LayoutMenu.cshtml";
 }
-@using System.Configuration
+
 <div class="row">
     <div class="col-md-12 text-center mt-4">
         <h2>Bienvenido al Menú Principal</h2>
@@ -43,9 +43,7 @@
             <div class="card-body text-center">
                 <h5 class="card-title">Página Principal</h5>
                 <p class="card-text">Redirige nuevamente a este menú.</p>
-                <a href="@(ConfigurationManager.AppSettings["RutaAppWebF"] + "/Menu")" class="btn btn-primary">
-                    Menu
-                </a>
+                @Html.ActionLink("Ir a Página Principal", "PaginaPrincipal", "Home", new { @class = "btn btn-primary" })
             </div>
         </div>
     </div>
