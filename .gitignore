@@ -78,7 +78,10 @@ bazel-out/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.testing
+.env.production
 
+*.bak
 # Coverage & Tests
 coverage/
 *.lcov

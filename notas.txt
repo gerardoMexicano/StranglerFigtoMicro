@@ -1,0 +1,12 @@
+Qué SÍ muestra diferencias reales y honestas
+En lugar de latencia, enfócate en cosas donde .NET Core 10 genuinamente gana:
+1. Throughput bajo carga concurrente
+Lanza 500-1000 requests simultáneos contra ambos. HttpClient + async/await en Core 10 con el thread pool mejorado va a manejar mucho mejor la carga. Eso se ve con BenchmarkDotNet o incluso con un simple Parallel.ForEach.
+2. Memoria y allocations
+Span<T>, ArrayPool, mejoras en ADO.NET en Core 10 reducen allocations notablemente. Eso se visualiza con dotMemory o el profiler de VS — números reales, nada falso.
+3. JSON serialization de resultados
+Si el endpoint serializa resultados de una query grande, System.Text.Json en Core 10 vs Newtonsoft.Json en 4.8 sí muestra diferencia medible.
+4. Startup time
+Core 10 con Native AOT arranca en milisegundos. Framework 4.8 tarda varios segundos. Eso es visual e inmediato.
+Sobre la complejidad de la BD
+WWI sigue siendo mejor opción para tu demo porque tiene queries naturalmente pesadas (joins entre ventas, inventario, proveedores). Puedes usar sus vistas y stored procedures tal como están, sin inventar nada.

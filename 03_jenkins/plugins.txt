@@ -1,0 +1,6 @@
+configuration-as-code
+git
+workflow-aggregator
+docker-workflow
+blueocean
+job-dsl

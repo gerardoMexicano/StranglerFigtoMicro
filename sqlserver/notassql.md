@@ -1,0 +1,3 @@
+ primero que nada necesitas instalar sql server porque fue lo que usamo o alguna base de datos relacional para migrar la wideworlimporters porque la use para hacer las demos  
+ ejecuccion hay archivos env esto en toeria es por entorno de desarrollo osea basicamente estoy simulando tener un entorno que es para testing  y otro produccion produccion tratare de darle las mejores  ruta pero igul son los template testing tratare que este actualizados
+ 

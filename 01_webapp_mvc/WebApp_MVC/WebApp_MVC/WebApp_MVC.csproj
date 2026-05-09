@@ -185,6 +185,8 @@
     <Content Include="Views\Home\PaginaAntigua.cshtml" />
     <Content Include="Views\Home\PaginaAngular.cshtml" />
     <Content Include="Views\Home\Menu.cshtml" />
+    <Content Include="Views\Shared\_LayoutMenu.cshtml" />
+    <Content Include="Views\Shared\_LayoutProtected.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

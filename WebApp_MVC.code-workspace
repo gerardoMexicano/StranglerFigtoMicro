@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "01_webapp_mvc/WebApp_MVC"
+		},
+		{
+			"path": "02_webapp_webforms/WebApp_WebForms/WebApp_WebForms"
+		}
+	],
+	"settings": {}
+}
