@@ -72,6 +72,19 @@ else
     success "Usuario 'jenkins' ya existe"
 fi
 
+# --- NUEVA SECCIÓN PARA DOCKER ---
+if command -v docker &>/dev/null; then
+    info "Configurando permisos de Docker para el agente..."
+    # Crear el grupo docker si no existe
+    sudo groupadd -f docker
+    # Agregar el usuario jenkins al grupo docker
+    sudo usermod -aG docker jenkins
+    success "Usuario 'jenkins' agregado al grupo 'docker'"
+else
+    warn "Docker no está instalado en este sistema. El agente no podrá levantar contenedores hasta que lo instales."
+fi
+# ---------------------------------
+
 sudo mkdir -p "${REMOTE_FS}/remoting"
 sudo chown -R jenkins:jenkins "$REMOTE_FS"
 success "Directorio ${REMOTE_FS} listo"

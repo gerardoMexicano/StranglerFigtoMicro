@@ -1,4 +1,4 @@
-﻿<%@ Page Title="Menú Principal" Language="VB" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Menu.aspx.vb" Inherits="WebApp_WebForms.Menu" %>
+<%@ Page Title="Menú Principal" Language="VB" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Menu.aspx.vb" Inherits="WebApp_WebForms.Menu" %>
 
 <asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
 
@@ -13,43 +13,43 @@
                 <div class="menu-icon">📋</div>
                 <h4>Reportes</h4>
                 <p>Consulta y genera reportes del sistema.</p>
-                <a href="#" class="menu-link">Ir a Reportes</a>
+                <a href="Reportes.aspx" class="menu-link">Ir a Reportes </a>
             </div>
             <div class="menu-card">
                 <div class="menu-icon">👥</div>
                 <h4>Usuarios</h4>
                 <p>Administración de usuarios del sistema.</p>
-                <a href="#" class="menu-link">Ir a Usuarios</a>
+                <a href="Usuarios.aspx" class="menu-link">Ir a Usuarios</a>
             </div>
             <div class="menu-card">
                 <div class="menu-icon">⚙️</div>
                 <h4>Configuración</h4>
                 <p>Ajustes generales de la aplicación.</p>
-                <a href="#" class="menu-link">Ir a Configuración</a>
+                <a href="Configuracion.aspx" class="menu-link">Ir a Configuración</a>
             </div>
             <div class="menu-card">
                 <div class="menu-icon">📊</div>
                 <h4>Dashboard</h4>
                 <p>Vista general y estadísticas del sistema.</p>
-                <a href="#" class="menu-link">Ir a Dashboard</a>
+                <a href="Dashboard.aspx" class="menu-link">Ir a Dashboard</a>
             </div>
             <div class="menu-card">
                 <div class="menu-icon">🚀</div>
                 <h4>Segunda Aplicacion</h4>
                 <p>Aplicacion construida en C# 4.8.1 Representa Si ya Sabes.</p>
-                <a href="#" class="menu-link">BrokenTaxes </a>
+                <a href="<%= ConfigurationManager.AppSettings("RutaAppMVC") + "/Home/Menu" %>" class="menu-link">BrokenTaxes</a>
             </div>
             <div class="menu-card">
                 <div class="menu-icon">⭐​</div>
                 <h4>Angular</h4>
                 <p>Aplicacion construida en Angular Lo nuevo Todo nuevo.</p>
-                <a href="#" class="menu-link">Angular Nuevo</a>
+                <a href="AngularPage.aspx" class="menu-link">Angular Nuevo</a>
             </div>
             <div class="menu-card">
                 <div class="menu-icon">🥀​​</div>
                 <h4>Frontend Antiguo backend nuevo</h4>
                 <p>pagina construida en forma Nativa pero usa bakckend independiente asi seria la migracion.</p>
-                <a href="#" class="menu-link">Pagina Con  mas Potencia </a>
+                <a href="LEgFrontNEWBACK.aspx" class="menu-link">Pagina Con  mas Potencia </a>
             </div>
         </div>
 

@@ -2,25 +2,45 @@ version: '3.8'
 
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver
+    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}
+
+    container_name: ${SQLSERVER_CONTAINER_NAME:-sqlserver}
+
     restart: unless-stopped
+
     ports:
-      - "1433:1433"
+      - "${SQLSERVER_PORT:-1433}:1433"
+
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "TuPassword_Segura123!"
-      MSSQL_PID: "Developer"          # Gratis para dev/test
+
+      # Contraseña SA
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+
+      # Edition
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+
+      # Opcional
+      TZ: ${TZ:-America/Mexico_City}
+
     volumes:
-      - sqldata:/var/opt/mssql
+      # Persistencia de datos
+      - sqlserver_data:/var/opt/mssql
+      # Scripts SQL opcionales
       - ./db:/db
+      # Backup .bak para restaurar
+      - ${BAK_OLTP_PATH}:/var/opt/mssql/backup/wwi.bak:ro
+
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TuPassword_Segura123!' -C -Q 'SELECT 1' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${MSSQL_SA_PASSWORD}' -C -Q 'SELECT 1' || exit 1"
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
       start_period: 30s
 
 volumes:
-  sqldata:
-    driver: local
+  sqlserver_data:

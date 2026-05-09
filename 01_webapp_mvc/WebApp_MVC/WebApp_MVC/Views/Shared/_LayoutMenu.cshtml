@@ -4,18 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewBag.Title - Menú Principal</title>
+    @using System.Configuration
     @Styles.Render("~/Content/css")
     @Scripts.Render("~/bundles/modernizr")
     <style>
         body {
             background-color: #e3f2fd; /* Light blue */
         }
+
         .navbar-custom {
             background-color: #0d47a1; /* Dark blue */
         }
-        .navbar-custom .navbar-brand, .navbar-custom .nav-link {
-            color: #ffffff;
-        }
+
+            .navbar-custom .navbar-brand, .navbar-custom .nav-link {
+                color: #ffffff;
+            }
     </style>
 </head>
 <body>
@@ -33,6 +36,7 @@
                     <li>@Html.ActionLink("Pag. Ant. N. Backend", "PaginaAntiguaNuevoBackend", "Home", new { area = "" }, new { @class = "nav-link" })</li>
                     <li>@Html.ActionLink("Pagina en Angular", "PaginaAngular", "Home", new { area = "" }, new { @class = "nav-link" })</li>
                     <li>@Html.ActionLink("Pagina Principal", "PaginaPrincipal", "Home", new { area = "" }, new { @class = "nav-link" })</li>
+                    <li><a href="@(ConfigurationManager.AppSettings["RutaAppWebF"] + "/Menu")" class = "nav-link">Pagina Menu App</a></li>
                 </ul>
                 <ul class="navbar-nav">
                     <li>@Html.ActionLink("Cerrar sesión", "Logout", "Account", new { area = "" }, new { @class = "nav-link" })</li>
