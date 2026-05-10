@@ -339,8 +339,8 @@
         <div class="chart-card full">
             <div class="chart-header">
                 <div>
-                    <div class="chart-title">Revenue · Costo · Margen mensual</div>
-                    <div class="chart-subtitle">Ingresos brutos, costo total y margen neto agrupados por mes</div>
+                    <div class="chart-title">Ingresos Brutos · Impuestos · Total mensual</div>
+                    <div class="chart-subtitle">Ingresos brutos, impuestos y total agrupados por mes</div>
                 </div>
                 <span class="chart-badge">Visual 1</span>
             </div>
@@ -385,7 +385,7 @@
             <div class="chart-header">
                 <div>
                     <div class="chart-title">Eficiencia del vendedor</div>
-                    <div class="chart-subtitle">Revenue total generado y % de descuento otorgado — rojo si descuento &gt; 10 %</div>
+                    <div class="chart-subtitle">Revenue total generado y % de margen promedio — rojo si margen &lt; 20 %</div>
                 </div>
                 <span class="chart-badge">Visual 4</span>
             </div>
@@ -396,7 +396,7 @@
                             <th>#</th>
                             <th>Vendedor</th>
                             <th>Revenue total</th>
-                            <th>% Descuento prom.</th>
+                            <th>% Margen prom.</th>
                             <th>Estado</th>
                         </tr>
                     </thead>
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         borderRadius: 4
                     },
                     {
-                        label: 'Costo total',
+                        label: 'Impuestos',
                         data: costos,
                         backgroundColor: 'rgba(247,129,102,0.7)',
                         borderColor: '#f78166',
@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         borderRadius: 4
                     },
                     {
-                        label: 'Margen bruto',
+                        label: 'Ingresos Totales',
                         data: margenes,
                         type: 'line',
                         borderColor: '#3fb950',
@@ -632,12 +632,12 @@ document.addEventListener('DOMContentLoaded', function () {
         dashVendedores.forEach((v, i) => {
             const tr = document.createElement('tr');
             const badgeCls = v.alerta ? 'badge-bad' : 'badge-ok';
-            const badgeTxt = v.alerta ? '⚠ Alto descuento' : '✓ OK';
+            const badgeTxt = v.alerta ? '⚠ Margen bajo' : '✓ OK';
             tr.innerHTML = `
                 <td style="color:var(--muted);font-size:.8rem;">${i + 1}</td>
                 <td style="font-weight:600;">${v.vendedor}</td>
                 <td>${fmtMXN(v.revenue)}</td>
-                <td>${fmtPct(v.pctDescuento)}</td>
+                <td>${fmtPct(v.pctMargen)}</td>
                 <td><span class="${badgeCls}">${badgeTxt}</span></td>`;
             tbody.appendChild(tr);
         });
@@ -648,15 +648,15 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /* ─── Helper: mensaje sin datos ─── */
-function sinDatos(canvasId) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    canvas.style.display = 'none';
-    const msg = document.createElement('div');
-    msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.9rem;';
-    msg.textContent = 'Sin datos para el período seleccionado';
-    canvas.parentNode.appendChild(msg);
+    function sinDatos(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.style.display = 'none';
+        const msg = document.createElement('div');
+        msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.9rem;';
+        msg.textContent = 'Sin datos para el período seleccionado';
+        canvas.parentNode.appendChild(msg);
 }
 </script>
 </body>

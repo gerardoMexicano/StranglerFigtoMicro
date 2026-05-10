@@ -64,8 +64,8 @@ Public Class Dashboard
                 MONTH(o.OrderDate) AS Mes,
                 DATENAME(MONTH, o.OrderDate) AS NombreMes,
                 SUM(ol.Quantity * ol.UnitPrice)                                      AS IngresosBrutos,
-                SUM(ol.Quantity * ol.UnitCost)                                       AS CostoTotal,
-                SUM((ol.UnitPrice - ol.UnitCost) * ol.Quantity - ol.TaxAmount)       AS MargenBruto
+                SUM(ol.Quantity * ol.UnitPrice * ol.TaxRate)                         AS ImpuestosPagados,
+                SUM(ol.Quantity * ol.UnitPrice * (ol.TaxRate + 1))                   AS IngresosTotal
             FROM Sales.Orders o
             INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
             WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin
@@ -83,8 +83,8 @@ Public Class Dashboard
                         filas.Add(New With {
                             .mes = $"{dr("NombreMes")} {dr("Anio")}",
                             .ingresos = Math.Round(Convert.ToDecimal(dr("IngresosBrutos")), 2),
-                            .costo = Math.Round(Convert.ToDecimal(dr("CostoTotal")), 2),
-                            .margen = Math.Round(Convert.ToDecimal(dr("MargenBruto")), 2)
+                            .costo = Math.Round(Convert.ToDecimal(dr("ImpuestosPagados")), 2),
+                            .margen = Math.Round(Convert.ToDecimal(dr("IngresosTotal")), 2)
                         })
                     End While
                 End Using
@@ -100,11 +100,11 @@ Public Class Dashboard
         Dim sql As String = "
             SELECT TOP 10
                 c.CustomerName,
-                SUM((ol.UnitPrice - ol.UnitCost) * ol.Quantity - ol.TaxAmount) AS MargenNeto
+                SUM(il.LineProfit) AS MargenNeto
             FROM Sales.Customers c
-            INNER JOIN Sales.Orders o  ON c.CustomerID = o.CustomerID
-            INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin
+            INNER JOIN Sales.Invoices i  ON c.CustomerID = i.CustomerID
+            INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @FechaIni AND @FechaFin
             GROUP BY c.CustomerID, c.CustomerName
             ORDER BY MargenNeto DESC"
 
@@ -133,14 +133,13 @@ Public Class Dashboard
     Private Function CargarMargenCategoria(fechaIni As Date, fechaFin As Date) As Object
         Dim sql As String = "
             SELECT
-                sg.StockGroupName AS Categoria,
-                SUM((ol.UnitPrice - ol.UnitCost) * ol.Quantity - ol.TaxAmount) AS MargenBruto
-            FROM Warehouse.StockGroups sg
-            INNER JOIN Warehouse.StockItemStockGroups sisg ON sg.StockGroupID = sisg.StockGroupID
-            INNER JOIN Sales.OrderLines ol ON sisg.StockItemID = ol.StockItemID
-            INNER JOIN Sales.Orders o ON ol.OrderID = o.OrderID
-            WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin
-            GROUP BY sg.StockGroupID, sg.StockGroupName
+                'Grupo ' + CAST(sisg.StockGroupID AS VARCHAR) AS Categoria,
+                SUM(il.LineProfit) AS MargenBruto
+            FROM Warehouse.StockItemStockGroups sisg
+            INNER JOIN Sales.InvoiceLines il ON sisg.StockItemID = il.StockItemID
+            INNER JOIN Sales.Invoices i ON il.InvoiceID = i.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @FechaIni AND @FechaFin
+            GROUP BY sisg.StockGroupID
             ORDER BY MargenBruto DESC"
 
         Dim filas As New List(Of Object)
@@ -169,14 +168,14 @@ Public Class Dashboard
         Dim sql As String = "
             SELECT
                 p.FullName AS Vendedor,
-                SUM(ol.ExtendedPrice)                                          AS RevenuTotal,
-                CASE WHEN SUM(ol.ExtendedPrice) = 0 THEN 0
-                     ELSE ROUND(SUM(ol.TaxAmount) * 100.0 / SUM(ol.ExtendedPrice), 2)
-                END AS PctDescuento
+                SUM(il.ExtendedPrice) AS RevenuTotal,
+                CASE WHEN SUM(il.ExtendedPrice) = 0 THEN 0
+                     ELSE ROUND(SUM(il.LineProfit) * 100.0 / SUM(il.ExtendedPrice), 2)
+                END AS PctMargen
             FROM Application.People p
-            INNER JOIN Sales.Orders o  ON p.PersonID = o.SalespersonPersonID
-            INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin
+            INNER JOIN Sales.Invoices i  ON p.PersonID = i.SalespersonPersonID
+            INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @FechaIni AND @FechaFin
             GROUP BY p.PersonID, p.FullName
             ORDER BY RevenuTotal DESC"
 
@@ -191,8 +190,8 @@ Public Class Dashboard
                         filas.Add(New With {
                             .vendedor = dr("Vendedor").ToString(),
                             .revenue = Math.Round(Convert.ToDecimal(dr("RevenuTotal")), 2),
-                            .pctDescuento = Convert.ToDouble(dr("PctDescuento")),
-                            .alerta = Convert.ToDouble(dr("PctDescuento")) > 10
+                            .pctMargen = Convert.ToDouble(dr("PctMargen")),
+                            .alerta = Convert.ToDouble(dr("PctMargen")) < 20
                         })
                     End While
                 End Using
@@ -212,52 +211,52 @@ Public Class Dashboard
 
         Dim sql As String = "
             -- KPI 1: Ingresos del período actual
-            SELECT SUM(ol.ExtendedPrice)
-            FROM Sales.Orders o INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin;
+            SELECT ISNULL(SUM(il.ExtendedPrice),0)
+            FROM Sales.Invoices i INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @FechaIni AND @FechaFin;
 
             -- KPI 2: Margen bruto % del período actual
-            SELECT CASE WHEN SUM(ol.ExtendedPrice) = 0 THEN 0
-                        ELSE ROUND(SUM((ol.UnitPrice - ol.UnitCost) * ol.Quantity) * 100.0 / SUM(ol.ExtendedPrice), 2)
+            SELECT CASE WHEN SUM(il.ExtendedPrice) = 0 THEN 0
+                        ELSE ROUND(SUM(il.LineProfit) * 100.0 / SUM(il.ExtendedPrice), 2)
                    END
-            FROM Sales.Orders o INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin;
+            FROM Sales.Invoices i INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @FechaIni AND @FechaFin;
 
             -- KPI 3: Total órdenes período actual
-            SELECT COUNT(DISTINCT o.OrderID)
-            FROM Sales.Orders o
-            WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin;
+            SELECT COUNT(DISTINCT i.InvoiceID)
+            FROM Sales.Invoices i
+            WHERE i.InvoiceDate BETWEEN @FechaIni AND @FechaFin;
 
             -- KPI 4: Ticket promedio período actual
-            SELECT CASE WHEN COUNT(DISTINCT o.OrderID) = 0 THEN 0
-                        ELSE ROUND(SUM(ol.ExtendedPrice) / COUNT(DISTINCT o.OrderID), 2)
+            SELECT CASE WHEN COUNT(DISTINCT i.InvoiceID) = 0 THEN 0
+                        ELSE ROUND(SUM(il.ExtendedPrice) / COUNT(DISTINCT i.InvoiceID), 2)
                    END
-            FROM Sales.Orders o INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @FechaIni AND @FechaFin;
+            FROM Sales.Invoices i INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @FechaIni AND @FechaFin;
 
             -- KPI 1 anterior
-            SELECT ISNULL(SUM(ol.ExtendedPrice),0)
-            FROM Sales.Orders o INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;
+            SELECT ISNULL(SUM(il.ExtendedPrice),0)
+            FROM Sales.Invoices i INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;
 
             -- KPI 2 anterior
-            SELECT CASE WHEN SUM(ol.ExtendedPrice) = 0 THEN 0
-                        ELSE ROUND(SUM((ol.UnitPrice - ol.UnitCost) * ol.Quantity) * 100.0 / SUM(ol.ExtendedPrice), 2)
+            SELECT CASE WHEN SUM(il.ExtendedPrice) = 0 THEN 0
+                        ELSE ROUND(SUM(il.LineProfit) * 100.0 / SUM(il.ExtendedPrice), 2)
                    END
-            FROM Sales.Orders o INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;
+            FROM Sales.Invoices i INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;
 
             -- KPI 3 anterior
-            SELECT COUNT(DISTINCT o.OrderID)
-            FROM Sales.Orders o
-            WHERE o.OrderDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;
+            SELECT COUNT(DISTINCT i.InvoiceID)
+            FROM Sales.Invoices i
+            WHERE i.InvoiceDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;
 
             -- KPI 4 anterior
-            SELECT CASE WHEN COUNT(DISTINCT o.OrderID) = 0 THEN 0
-                        ELSE ROUND(SUM(ol.ExtendedPrice) / COUNT(DISTINCT o.OrderID), 2)
+            SELECT CASE WHEN COUNT(DISTINCT i.InvoiceID) = 0 THEN 0
+                        ELSE ROUND(SUM(il.ExtendedPrice) / COUNT(DISTINCT i.InvoiceID), 2)
                    END
-            FROM Sales.Orders o INNER JOIN Sales.OrderLines ol ON o.OrderID = ol.OrderID
-            WHERE o.OrderDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;"
+            FROM Sales.Invoices i INNER JOIN Sales.InvoiceLines il ON i.InvoiceID = il.InvoiceID
+            WHERE i.InvoiceDate BETWEEN @PeriodoAntIni AND @PeriodoAntFin;"
 
         Dim vals(7) As Decimal
         Using conn As New SqlConnection(ConnStr)
