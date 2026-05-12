@@ -118,3 +118,5 @@ docker-compose.override.yml
 # Folders specified in project
 fakeData/
 temporal/
+nomina/
+ejemplosxml/
