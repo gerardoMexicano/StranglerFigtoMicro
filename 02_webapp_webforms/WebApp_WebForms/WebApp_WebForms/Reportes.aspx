@@ -11,8 +11,13 @@
         .icon { font-size: 4rem; margin-bottom: 20px; }
         h1 { color: #1a1a2e; font-size: 2rem; margin-bottom: 10px; font-weight: 600; }
         p { color: #555; font-size: 1.1rem; line-height: 1.6; margin-bottom: 30px; }
-        .btn-back { display: inline-block; padding: 12px 24px; background: #16213e; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; transition: all 0.3s ease; }
+        .btn-back { display: inline-block; padding: 12px 24px; background: #16213e; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; transition: all 0.3s ease; margin-top: 10px; }
         .btn-back:hover { background: #0f3460; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.15); text-decoration: none; }
+        .btn-action { display: inline-block; padding: 12px 24px; background: #e94560; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; transition: all 0.3s ease; border: none; cursor: pointer; margin-bottom: 20px; font-size: 1rem; }
+        .btn-action:hover { background: #d03050; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .file-upload-wrapper { margin-bottom: 20px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; }
+        .file-upload-wrapper input[type=file] { width: 100%; font-size: 1rem; color: #555; }
+        .status-msg { margin-top: 20px; font-weight: bold; color: #0f3460; }
     </style>
 </head>
 <body>
@@ -20,8 +25,17 @@
         <div class="container">
             <div class="icon">📋</div>
             <h1>Reportes</h1>
-            <p>Módulo para la consulta, visualización y generación de reportes detallados del sistema.</p>
+                        <p>Módulo para la consulta, visualización y generación de reportes detallados del sistema.</p>
+            <div class="file-upload-wrapper">
+                <label for="fuXmlFiles" style="display:block; margin-bottom: 8px; font-weight: 600; color: #333;">Sube tus archivos XML:</label>
+                <asp:FileUpload ID="fuXmlFiles" runat="server" AllowMultiple="true" accept=".xml" />
+            </div>
+            <asp:Button ID="btnGenerarPDFs" runat="server" Text="Generar PDFs (Proceso Pesado)" CssClass="btn-action" OnClick="btnGenerarPDFs_Click" />
+            <br />
             <a href="Menu.aspx" class="btn-back">⬅ Volver al Menú Principal</a>
+            <div class="status-msg">
+                <asp:Literal ID="litStatus" runat="server"></asp:Literal>
+            </div>
         </div>
     </form>
 </body>
