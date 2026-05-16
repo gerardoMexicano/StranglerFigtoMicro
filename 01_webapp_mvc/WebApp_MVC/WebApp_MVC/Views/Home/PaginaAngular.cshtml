@@ -1,21 +1,489 @@
 @{
-    ViewBag.Title = "Página en Angular";
+    ViewBag.Title = "Demo de Rendimiento: .NET Framework vs .NET 10";
     Layout = "~/Views/Shared/_LayoutProtected.cshtml";
 }
 
-<div class="row">
-    <div class="col-md-12 text-center mt-4">
-        <h2>@ViewBag.Title</h2>
-        <p class="lead">Esta página servirá como contenedor para la aplicación en Angular.</p>
+<style>
+    :root {
+        --bg-dark: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.8);
+        --border-color: rgba(255, 255, 255, 0.1);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
         
-        <div class="alert alert-warning mt-4" role="alert">
-            Cargando scripts y componentes de Angular...
+        --color-netfw: #e11d48; /* Red for slow/legacy */
+        --color-net10: #10b981; /* Green for fast/modern */
+    }
+
+    body {
+        background-color: var(--bg-dark) !important;
+        color: var(--text-main) !important;
+    }
+
+    .demo-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .glass-panel {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-title {
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-box {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 0.75rem;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .metric-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .fw-value { color: var(--color-netfw); }
+    .net10-value { color: var(--color-net10); }
+
+    .map-container {
+        position: relative;
+        flex-grow: 1;
+        min-height: 400px;
+        background: #1e293b;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.1);
+        cursor: grab;
+    }
+
+    .map-container:active {
+        cursor: grabbing;
+    }
+
+    canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .overlay-status {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.8);
+        font-weight: bold;
+        font-size: 1.5rem;
+        z-index: 10;
+        transition: opacity 0.3s;
+    }
+
+    .btn-run {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        color: white;
+        border: none;
+        padding: 12px 32px;
+        font-size: 1.2rem;
+        font-weight: 700;
+        border-radius: 8px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-run:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+    }
+    
+    .btn-run:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .memory-bar-container {
+        height: 8px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+
+    .memory-bar {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+</style>
+
+<div class="container-fluid mt-3" id="demo-app">
+    <div class="demo-header">
+        <h1 style="font-weight: 800; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Comparativa de Renderizado Espacial
+        </h1>
+        <p style="color: var(--text-muted); font-size: 1.1rem;">
+            10,000 Sismos (GeoJSON) - Pan & Zoom en tiempo real
+        </p>
+        <button id="btnRun" class="btn-run mt-2">
+            <i class="bi bi-play-fill"></i> Ejecutar Comparativa
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <!-- Panel .NET Framework 4.8 -->
+        <div class="col-lg-6">
+            <div class="glass-panel">
+                <div class="panel-title" style="color: var(--color-netfw); font-size: 1.5rem;">
+                    .NET Framework 4.8 (In-Process)
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 1rem;">
+                    WebClient Síncrono + Newtonsoft.Json + GDI+ (Software Rendering)
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">Descarga + Parseo</div>
+                        <div class="metric-value fw-value" id="fw-parse-time">-- ms</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Primer Render</div>
+                        <div class="metric-value fw-value" id="fw-render-time">-- ms</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">FPS (Interactividad)</div>
+                        <div class="metric-value fw-value" id="fw-fps">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Consumo de Memoria</div>
+                        <div class="metric-value fw-value" id="fw-memory">12 MB</div>
+                        <div class="memory-bar-container">
+                            <div class="memory-bar" style="width: 5%; background: var(--color-netfw);" id="fw-memory-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="map-container" id="fw-container">
+                    <div class="overlay-status" id="fw-overlay">Esperando inicio...</div>
+                    <canvas id="fw-canvas"></canvas>
+                </div>
+            </div>
         </div>
-        
-        <!-- Aquí iría el <app-root></app-root> o similar -->
-        <div style="border: 2px dashed #b71c1c; padding: 50px; margin-top: 30px;">
-            <h4>Contenedor Angular</h4>
-            <p>El framework Angular se inicializará dentro de este espacio.</p>
+
+        <!-- Panel .NET 10 -->
+        <div class="col-lg-6">
+            <div class="glass-panel">
+                <div class="panel-title" style="color: var(--color-net10); font-size: 1.5rem;">
+                    .NET 10 (Proceso Hijo)
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 1rem;">
+                    System.Text.Json (Span&lt;T&gt;) + SkiaSharp (GPU Acelerado)
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">Descarga + Parseo</div>
+                        <div class="metric-value net10-value" id="net10-parse-time">-- ms</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Primer Render</div>
+                        <div class="metric-value net10-value" id="net10-render-time">-- ms</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">FPS (Interactividad)</div>
+                        <div class="metric-value net10-value" id="net10-fps">--</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Consumo de Memoria</div>
+                        <div class="metric-value net10-value" id="net10-memory">12 MB</div>
+                        <div class="memory-bar-container">
+                            <div class="memory-bar" style="width: 5%; background: var(--color-net10);" id="net10-memory-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="map-container" id="net10-container">
+                    <div class="overlay-status" id="net10-overlay">Esperando inicio...</div>
+                    <canvas id="net10-canvas"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // === MOCK DATA GENERATION ===
+        const TOTAL_POINTS = 10000;
+        const earthquakes = [];
+        for (let i = 0; i < TOTAL_POINTS; i++) {
+            earthquakes.push({
+                x: Math.random() * 800,
+                y: Math.random() * 400,
+                mag: Math.random() * 5 + 1
+            });
+        }
+
+        // === STATE ===
+        let isRunning = false;
+        let mapState = { offsetX: 0, offsetY: 0, scale: 1 };
+        let isDragging = false;
+        let lastMouse = { x: 0, y: 0 };
+
+        // === UI ELEMENTS ===
+        const btnRun = document.getElementById('btnRun');
+        
+        // Framework UI
+        const fwCanvas = document.getElementById('fw-canvas');
+        const fwCtx = fwCanvas.getContext('2d');
+        const fwOverlay = document.getElementById('fw-overlay');
+        const fwParseLbl = document.getElementById('fw-parse-time');
+        const fwRenderLbl = document.getElementById('fw-render-time');
+        const fwFpsLbl = document.getElementById('fw-fps');
+        const fwMemoryLbl = document.getElementById('fw-memory');
+        const fwMemoryBar = document.getElementById('fw-memory-bar');
+
+        // .NET 10 UI
+        const net10Canvas = document.getElementById('net10-canvas');
+        const net10Ctx = net10Canvas.getContext('2d');
+        const net10Overlay = document.getElementById('net10-overlay');
+        const net10ParseLbl = document.getElementById('net10-parse-time');
+        const net10RenderLbl = document.getElementById('net10-render-time');
+        const net10FpsLbl = document.getElementById('net10-fps');
+        const net10MemoryLbl = document.getElementById('net10-memory');
+        const net10MemoryBar = document.getElementById('net10-memory-bar');
+
+        // Resizing
+        function resizeCanvases() {
+            const rect = fwCanvas.parentElement.getBoundingClientRect();
+            fwCanvas.width = rect.width;
+            fwCanvas.height = rect.height;
+            net10Canvas.width = rect.width;
+            net10Canvas.height = rect.height;
+            if(isRunning) {
+                renderNet10();
+                renderFramework();
+            }
+        }
+        window.addEventListener('resize', resizeCanvases);
+        setTimeout(resizeCanvases, 100);
+
+        // === ENGINE: .NET 10 (Fast & Smooth) ===
+        let net10Frames = 0;
+        let net10LastTime = performance.now();
+        
+        function renderNet10() {
+            if (!isRunning) return;
+            
+            // Draw
+            net10Ctx.clearRect(0, 0, net10Canvas.width, net10Canvas.height);
+            net10Ctx.save();
+            net10Ctx.translate(mapState.offsetX, mapState.offsetY);
+            net10Ctx.scale(mapState.scale, mapState.scale);
+            
+            net10Ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+            net10Ctx.beginPath();
+            for (let i = 0; i < TOTAL_POINTS; i++) {
+                const q = earthquakes[i];
+                net10Ctx.moveTo(q.x, q.y);
+                net10Ctx.arc(q.x, q.y, 3, 0, Math.PI * 2);
+            }
+            net10Ctx.fill();
+            net10Ctx.restore();
+
+            // FPS Calc
+            net10Frames++;
+            const now = performance.now();
+            if (now - net10LastTime >= 1000) {
+                net10FpsLbl.innerText = net10Frames + ' fps';
+                net10Frames = 0;
+                net10LastTime = now;
+            }
+
+            requestAnimationFrame(renderNet10);
+        }
+
+        // === ENGINE: .NET FRAMEWORK (Simulated Lag & Blocking) ===
+        let fwFrames = 0;
+        let fwLastTime = performance.now();
+        
+        function renderFramework() {
+            if (!isRunning) return;
+
+            // Draw
+            fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+            fwCtx.save();
+            fwCtx.translate(mapState.offsetX, mapState.offsetY);
+            fwCtx.scale(mapState.scale, mapState.scale);
+            
+            fwCtx.fillStyle = 'rgba(225, 29, 72, 0.6)';
+            fwCtx.beginPath();
+            for (let i = 0; i < TOTAL_POINTS; i++) {
+                const q = earthquakes[i];
+                fwCtx.moveTo(q.x, q.y);
+                fwCtx.arc(q.x, q.y, 4, 0, Math.PI * 2);
+            }
+            fwCtx.fill();
+            fwCtx.restore();
+
+            // SIMULATE CPU BLOCKING (GDI+ repainting overhead on 10k points)
+            // This blocks the main thread artificially to simulate ~3-5 FPS when interacting
+            if (isDragging) {
+                const startBlock = performance.now();
+                while(performance.now() - startBlock < 250) { 
+                    // Block thread 
+                }
+            }
+
+            // FPS Calc
+            fwFrames++;
+            const now = performance.now();
+            if (now - fwLastTime >= 1000) {
+                fwFpsLbl.innerText = fwFrames + ' fps';
+                fwFrames = 0;
+                fwLastTime = now;
+            }
+
+            // Stagger next frame to mimic software rendering delay
+            setTimeout(() => {
+                requestAnimationFrame(renderFramework);
+            }, 100); 
+        }
+
+        // === INTERACTIVITY LOGIC (Synchronized) ===
+        const containers = [document.getElementById('fw-container'), document.getElementById('net10-container')];
+        
+        containers.forEach(container => {
+            container.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastMouse = { x: e.clientX, y: e.clientY };
+            });
+            
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            container.addEventListener('mousemove', (e) => {
+                if (!isDragging || !isRunning) return;
+                const dx = e.clientX - lastMouse.x;
+                const dy = e.clientY - lastMouse.y;
+                mapState.offsetX += dx;
+                mapState.offsetY += dy;
+                lastMouse = { x: e.clientX, y: e.clientY };
+                
+                // If the user drags, the Net10 engine will render it flawlessly in its RAF.
+                // The Framework engine will stutter violently due to the simulated CPU block.
+            });
+
+            container.addEventListener('wheel', (e) => {
+                if (!isRunning) return;
+                e.preventDefault();
+                const zoomIntensity = 0.1;
+                const wheel = e.deltaY < 0 ? 1 : -1;
+                const zoom = Math.exp(wheel * zoomIntensity);
+                
+                // Scale around center for simplicity
+                mapState.scale *= zoom;
+            }, { passive: false });
+        });
+
+        // === SIMULATION SEQUENCE ===
+        btnRun.addEventListener('click', async () => {
+            if(isRunning) return;
+            btnRun.disabled = true;
+            
+            // Reset metrics
+            fwParseLbl.innerText = '0 ms'; fwRenderLbl.innerText = '0 ms'; fwFpsLbl.innerText = '0 fps';
+            net10ParseLbl.innerText = '0 ms'; net10RenderLbl.innerText = '0 ms'; net10FpsLbl.innerText = '0 fps';
+            
+            // --- .NET 10 SEQUENCE (Ultra Fast) ---
+            net10Overlay.innerText = "Descargando & Parseando (Stream)...";
+            net10MemoryLbl.innerText = "14 MB";
+            net10MemoryBar.style.width = "7%";
+            
+            setTimeout(() => {
+                net10ParseLbl.innerText = "30 ms";
+                net10Overlay.innerText = "Renderizando (SkiaSharp)...";
+                net10MemoryLbl.innerText = "22 MB";
+                net10MemoryBar.style.width = "10%";
+                
+                setTimeout(() => {
+                    net10RenderLbl.innerText = "8 ms";
+                    net10Overlay.style.opacity = "0";
+                    setTimeout(() => net10Overlay.style.display = "none", 300);
+                    
+                    // Launch Net10 Engine
+                    isRunning = true;
+                    renderNet10();
+                }, 8); // 8ms render mock
+            }, 30); // 30ms parse mock
+
+            // --- .NET FRAMEWORK SEQUENCE (Slow & Blocking) ---
+            fwOverlay.innerText = "Descargando string completo...";
+            
+            // Artificial delay to simulate WebClient.DownloadString + JsonConvert blocking
+            setTimeout(() => {
+                fwOverlay.innerText = "Parseando JSON (Newtonsoft)...";
+                fwMemoryLbl.innerText = "210 MB";
+                fwMemoryBar.style.width = "40%";
+                
+                setTimeout(() => {
+                    fwParseLbl.innerText = "2,100 ms";
+                    fwOverlay.innerText = "Renderizando (GDI+)...";
+                    fwMemoryLbl.innerText = "340 MB";
+                    fwMemoryBar.style.width = "80%";
+                    
+                    setTimeout(() => {
+                        fwRenderLbl.innerText = "450 ms";
+                        fwOverlay.style.opacity = "0";
+                        setTimeout(() => fwOverlay.style.display = "none", 300);
+                        
+                        // Launch FW Engine
+                        renderFramework();
+                        btnRun.innerText = "Simulación Activa - Arrastra el mapa";
+                    }, 450); // 450ms render mock
+                }, 1100); // the rest of the 2100ms
+            }, 1000); 
+
+        });
+    </script>
+}
