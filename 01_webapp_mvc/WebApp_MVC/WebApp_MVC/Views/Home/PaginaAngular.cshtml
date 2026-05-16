@@ -3,6 +3,9 @@
     Layout = "~/Views/Shared/_LayoutProtected.cshtml";
 }
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
     :root {
         --bg-dark: #0f172a;
@@ -87,20 +90,10 @@
         border-radius: 8px;
         overflow: hidden;
         border: 1px solid rgba(255,255,255,0.1);
-        cursor: grab;
     }
 
-    .map-container:active {
-        cursor: grabbing;
-    }
-
-    canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: block;
+    .leaflet-container {
+        background: #0f172a !important; /* Tema oscuro para el fondo del mapa */
     }
 
     .overlay-status {
@@ -204,7 +197,7 @@
 
                 <div class="map-container" id="fw-container">
                     <div class="overlay-status" id="fw-overlay">Esperando inicio...</div>
-                    <canvas id="fw-canvas"></canvas>
+                    <div id="fw-map" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;"></div>
                 </div>
             </div>
         </div>
@@ -243,7 +236,7 @@
 
                 <div class="map-container" id="net10-container">
                     <div class="overlay-status" id="net10-overlay">Esperando inicio...</div>
-                    <canvas id="net10-canvas"></canvas>
+                    <div id="net10-map" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;"></div>
                 </div>
             </div>
         </div>
@@ -253,28 +246,23 @@
 @section Scripts {
     <script>
         // === MOCK DATA GENERATION ===
-        const TOTAL_POINTS = 10000;
+        const TOTAL_POINTS = 5000;
         const earthquakes = [];
         for (let i = 0; i < TOTAL_POINTS; i++) {
             earthquakes.push({
-                x: Math.random() * 800,
-                y: Math.random() * 400,
+                lat: 14 + Math.random() * 18, // Latitudes aproximadas de México
+                lng: -118 + Math.random() * 32, // Longitudes aproximadas de México
                 mag: Math.random() * 5 + 1
             });
         }
 
         // === STATE ===
         let isRunning = false;
-        let mapState = { offsetX: 0, offsetY: 0, scale: 1 };
-        let isDragging = false;
-        let lastMouse = { x: 0, y: 0 };
 
         // === UI ELEMENTS ===
         const btnRun = document.getElementById('btnRun');
         
         // Framework UI
-        const fwCanvas = document.getElementById('fw-canvas');
-        const fwCtx = fwCanvas.getContext('2d');
         const fwOverlay = document.getElementById('fw-overlay');
         const fwParseLbl = document.getElementById('fw-parse-time');
         const fwRenderLbl = document.getElementById('fw-render-time');
@@ -283,8 +271,6 @@
         const fwMemoryBar = document.getElementById('fw-memory-bar');
 
         // .NET 10 UI
-        const net10Canvas = document.getElementById('net10-canvas');
-        const net10Ctx = net10Canvas.getContext('2d');
         const net10Overlay = document.getElementById('net10-overlay');
         const net10ParseLbl = document.getElementById('net10-parse-time');
         const net10RenderLbl = document.getElementById('net10-render-time');
@@ -292,139 +278,67 @@
         const net10MemoryLbl = document.getElementById('net10-memory');
         const net10MemoryBar = document.getElementById('net10-memory-bar');
 
-        // Resizing
-        function resizeCanvases() {
-            const rect = fwCanvas.parentElement.getBoundingClientRect();
-            fwCanvas.width = rect.width;
-            fwCanvas.height = rect.height;
-            net10Canvas.width = rect.width;
-            net10Canvas.height = rect.height;
+        // === MAP INITIALIZATION (LEAFLET) ===
+        // Usamos preferCanvas para que soporte miles de puntos eficientemente
+        const fwMap = L.map('fw-map', { preferCanvas: true }).setView([23.6345, -102.5528], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(fwMap);
+
+        const net10Map = L.map('net10-map', { preferCanvas: true }).setView([23.6345, -102.5528], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(net10Map);
+
+        // Bloqueo intencional del hilo en el mapa FW para simular la lentitud extrema (GDI+)
+        fwMap.on('drag', function() {
             if(isRunning) {
-                renderNet10();
-                renderFramework();
-            }
-        }
-        window.addEventListener('resize', resizeCanvases);
-        setTimeout(resizeCanvases, 100);
-
-        // === ENGINE: .NET 10 (Fast & Smooth) ===
-        let net10Frames = 0;
-        let net10LastTime = performance.now();
-        
-        function renderNet10() {
-            if (!isRunning) return;
-            
-            // Draw
-            net10Ctx.clearRect(0, 0, net10Canvas.width, net10Canvas.height);
-            net10Ctx.save();
-            net10Ctx.translate(mapState.offsetX, mapState.offsetY);
-            net10Ctx.scale(mapState.scale, mapState.scale);
-            
-            net10Ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
-            net10Ctx.beginPath();
-            for (let i = 0; i < TOTAL_POINTS; i++) {
-                const q = earthquakes[i];
-                net10Ctx.moveTo(q.x, q.y);
-                net10Ctx.arc(q.x, q.y, 3, 0, Math.PI * 2);
-            }
-            net10Ctx.fill();
-            net10Ctx.restore();
-
-            // FPS Calc
-            net10Frames++;
-            const now = performance.now();
-            if (now - net10LastTime >= 1000) {
-                net10FpsLbl.innerText = net10Frames + ' fps';
-                net10Frames = 0;
-                net10LastTime = now;
-            }
-
-            requestAnimationFrame(renderNet10);
-        }
-
-        // === ENGINE: .NET FRAMEWORK (Simulated Lag & Blocking) ===
-        let fwFrames = 0;
-        let fwLastTime = performance.now();
-        
-        function renderFramework() {
-            if (!isRunning) return;
-
-            // Draw
-            fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
-            fwCtx.save();
-            fwCtx.translate(mapState.offsetX, mapState.offsetY);
-            fwCtx.scale(mapState.scale, mapState.scale);
-            
-            fwCtx.fillStyle = 'rgba(225, 29, 72, 0.6)';
-            fwCtx.beginPath();
-            for (let i = 0; i < TOTAL_POINTS; i++) {
-                const q = earthquakes[i];
-                fwCtx.moveTo(q.x, q.y);
-                fwCtx.arc(q.x, q.y, 4, 0, Math.PI * 2);
-            }
-            fwCtx.fill();
-            fwCtx.restore();
-
-            // SIMULATE CPU BLOCKING (GDI+ repainting overhead on 10k points)
-            // This blocks the main thread artificially to simulate ~3-5 FPS when interacting
-            if (isDragging) {
                 const startBlock = performance.now();
-                while(performance.now() - startBlock < 250) { 
-                    // Block thread 
-                }
+                // Bloquea por 80ms para causar tirones (stuttering) al arrastrar
+                while(performance.now() - startBlock < 80) { } 
             }
+        });
 
-            // FPS Calc
-            fwFrames++;
-            const now = performance.now();
-            if (now - fwLastTime >= 1000) {
-                fwFpsLbl.innerText = fwFrames + ' fps';
-                fwFrames = 0;
-                fwLastTime = now;
-            }
-
-            // Stagger next frame to mimic software rendering delay
-            setTimeout(() => {
-                requestAnimationFrame(renderFramework);
-            }, 100); 
+        function renderPoints(map, color) {
+            earthquakes.forEach(q => {
+                L.circleMarker([q.lat, q.lng], {
+                    radius: 3,
+                    fillColor: color,
+                    color: color,
+                    weight: 1,
+                    opacity: 0.8,
+                    fillOpacity: 0.6
+                }).addTo(map);
+            });
         }
 
-        // === INTERACTIVITY LOGIC (Synchronized) ===
-        const containers = [document.getElementById('fw-container'), document.getElementById('net10-container')];
-        
-        containers.forEach(container => {
-            container.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                lastMouse = { x: e.clientX, y: e.clientY };
-            });
+        // Fake FPS loops just for the visual effect of the demo since Leaflet handles RAF internally
+        function startFPSLoops() {
+            let fwFrames = 0, net10Frames = 0;
+            let lastTime = performance.now();
             
-            window.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
-            
-            container.addEventListener('mousemove', (e) => {
-                if (!isDragging || !isRunning) return;
-                const dx = e.clientX - lastMouse.x;
-                const dy = e.clientY - lastMouse.y;
-                mapState.offsetX += dx;
-                mapState.offsetY += dy;
-                lastMouse = { x: e.clientX, y: e.clientY };
+            function loop() {
+                if(!isRunning) return;
                 
-                // If the user drags, the Net10 engine will render it flawlessly in its RAF.
-                // The Framework engine will stutter violently due to the simulated CPU block.
-            });
+                net10Frames++;
+                
+                // Simulate FW missing frames due to synchronous blocks
+                if(Math.random() > 0.6) { 
+                    fwFrames++;
+                }
 
-            container.addEventListener('wheel', (e) => {
-                if (!isRunning) return;
-                e.preventDefault();
-                const zoomIntensity = 0.1;
-                const wheel = e.deltaY < 0 ? 1 : -1;
-                const zoom = Math.exp(wheel * zoomIntensity);
-                
-                // Scale around center for simplicity
-                mapState.scale *= zoom;
-            }, { passive: false });
-        });
+                const now = performance.now();
+                if (now - lastTime >= 1000) {
+                    net10FpsLbl.innerText = (net10Frames > 60 ? 60 : net10Frames) + ' fps';
+                    fwFpsLbl.innerText = fwFrames + ' fps';
+                    net10Frames = 0;
+                    fwFrames = 0;
+                    lastTime = now;
+                }
+                requestAnimationFrame(loop);
+            }
+            loop();
+        }
 
         // === SIMULATION SEQUENCE ===
         btnRun.addEventListener('click', async () => {
@@ -453,7 +367,8 @@
                     
                     // Launch Net10 Engine
                     isRunning = true;
-                    renderNet10();
+                    startFPSLoops();
+                    renderPoints(net10Map, '#10b981'); // Verde
                 }, 8); // 8ms render mock
             }, 30); // 30ms parse mock
 
@@ -478,8 +393,8 @@
                         setTimeout(() => fwOverlay.style.display = "none", 300);
                         
                         // Launch FW Engine
-                        renderFramework();
-                        btnRun.innerText = "Simulación Activa - Arrastra el mapa";
+                        renderPoints(fwMap, '#e11d48'); // Rojo
+                        btnRun.innerText = "Simulación Activa - Arrastra los mapas";
                     }, 450); // 450ms render mock
                 }, 1100); // the rest of the 2100ms
             }, 1000); 
