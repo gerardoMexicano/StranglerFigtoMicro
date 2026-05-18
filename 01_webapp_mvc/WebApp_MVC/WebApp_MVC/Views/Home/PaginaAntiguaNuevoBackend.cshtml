@@ -1,15 +1,116 @@
+@model List<Dictionary<string, object>>
 @{
-    ViewBag.Title = "Página Antigua con Nuevo Backend";
+    ViewBag.Title = "Reporte Masivo Consolidado";
     Layout = "~/Views/Shared/_LayoutProtected.cshtml";
 }
 
 <div class="row">
-    <div class="col-md-12 text-center mt-4">
-        <h2>@ViewBag.Title</h2>
-        <p class="lead">Esta es la vista de la página antigua, pero consumiendo servicios del nuevo backend.</p>
+    <div class="col-md-12 mt-4">
+        <h2 class="text-center">@ViewBag.Title</h2>
+        <p class="lead text-center">Extracción masiva sincrónica (Antipatrón de Rendimiento para Demostración)</p>
         
-        <div class="alert alert-success mt-4" role="alert">
-            Contenido cargado desde la nueva API.
+        <div class="card bg-light mb-4 mt-4">
+            <div class="card-body">
+                <form method="get" action="@Url.Action("PaginaAntiguaNuevoBackend", "Home")" class="form-inline justify-content-center">
+                    <div class="form-group mb-2">
+                        <label for="fechaInicio" class="mr-2">Fecha Inicio:</label>
+                        <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="@ViewBag.FechaInicio" required />
+                    </div>
+                    <div class="form-group mx-sm-3 mb-2">
+                        <label for="fechaFin" class="mr-2">Fecha Fin:</label>
+                        <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="@ViewBag.FechaFin" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary mb-2">Consultar</button>
+                    <a href="@Url.Action("PaginaAntiguaNuevoBackend", "Home")" class="btn btn-secondary mb-2 ml-2">Limpiar</a>
+                </form>
+            </div>
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger text-center">
+                @ViewBag.Error
+            </div>
+        }
+        else if (ViewBag.Message != null)
+        {
+            <div class="alert alert-info text-center">
+                @ViewBag.Message
+            </div>
+        }
+        else if (Model != null && Model.Count > 0)
+        {
+            <div class="alert alert-warning text-center" role="alert">
+                Se han cargado <strong>@Model.Count</strong> registros en memoria bloqueando el hilo principal.
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover" style="font-size: 0.85em;">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>UUID</th>
+                        <th>Emisor</th>
+                        <th>Receptor</th>
+                        <th>Total</th>
+                        <th>Fecha</th>
+                        <th>Complemento</th>
+                        <th>Num Emp.</th>
+                        <th>Depto.</th>
+                        <th>Puesto</th>
+                        <th>Tot. Perc.</th>
+                        <th>Tot. Deduc.</th>
+                        <th>Movimiento</th>
+                        <th>Concepto</th>
+                        <th>Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        foreach(var row in Model)
+                        {
+                            <tr>
+                                <td><small>@row["UUID"]</small></td>
+                                <td>@row["EmisorRFC"]</td>
+                                <td>@row["ReceptorRFC"]</td>
+                                <td>@(row["Total"] != null ? Convert.ToDecimal(row["Total"]).ToString("C") : "")</td>
+                                <td>@(row["Fecha"] != null ? Convert.ToDateTime(row["Fecha"]).ToString("dd/MM/yyyy") : "")</td>
+                                <td>@row["TipoComplemento"]</td>
+                                <td>@row["NumEmpleado"]</td>
+                                <td>@row["Departamento"]</td>
+                                <td>@row["Puesto"]</td>
+                                <td>@(row["TotalPercepciones"] != null ? Convert.ToDecimal(row["TotalPercepciones"]).ToString("C") : "")</td>
+                                <td>@(row["TotalDeducciones"] != null ? Convert.ToDecimal(row["TotalDeducciones"]).ToString("C") : "")</td>
+                                <td>@row["TipoMovimiento"]</td>
+                                <td title="@row["Concepto"]">
+                                    @{ 
+                                        var concepto = row["Concepto"]?.ToString() ?? "";
+                                        @(concepto.Length > 40 ? concepto.Substring(0, 40) + "..." : concepto)
+                                    }
+                                </td>
+                                <td>@(row["Importe"] != null ? Convert.ToDecimal(row["Importe"]).ToString("C") : "")</td>
+                            </tr>
+                        }
+                    }
+                    else if (ViewBag.Error == null && ViewBag.Message == null)
+                    {
+                        <tr>
+                            <td colspan="14" class="text-center text-muted">No se encontraron registros para el rango de fechas seleccionado.</td>
+                        </tr>
+                    }
+                    else if (ViewBag.Message != null)
+                    {
+                        <tr>
+                            <td colspan="14" class="text-center text-muted">Utilice el filtro de arriba para consultar los datos.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

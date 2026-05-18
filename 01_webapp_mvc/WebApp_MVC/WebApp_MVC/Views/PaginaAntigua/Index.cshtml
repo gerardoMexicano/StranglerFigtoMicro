@@ -1,0 +1,512 @@
+@model WebApp_MVC.Models.NominaResumenViewModel
+
+@{
+    ViewBag.Title = "Página Antigua (Dashboard Nómina)";
+    Layout = "~/Views/Shared/_LayoutProtected.cshtml";
+}
+
+<style>
+    :root {
+        --primary-glow: rgba(0, 210, 255, 0.5);
+        --bg-color: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    body {
+        background-color: var(--bg-color) !important;
+        color: var(--text-main) !important;
+        font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    }
+
+    .dashboard-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .glass-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        margin-bottom: 20px;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 210, 255, 0.1);
+    }
+
+    .kpi-title {
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+
+    .kpi-value.deduccion {
+        background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .kpi-value.neto {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .table-glass {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        color: var(--text-main);
+    }
+
+    .table-glass th, .table-glass td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .table-glass th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+    }
+
+    .table-glass tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .table-glass tbody tr {
+        transition: background-color 0.2s;
+    }
+
+    .table-glass tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    /* Full page loading overlay */
+    #loadingOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        color: white;
+    }
+
+    /* Snackbar */
+    #snackbar {
+        visibility: hidden;
+        min-width: 250px;
+        margin-left: -125px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 2px;
+        padding: 16px;
+        position: fixed;
+        z-index: 10000;
+        left: 50%;
+        bottom: 30px;
+        font-size: 17px;
+    }
+
+    #snackbar.show {
+        visibility: visible;
+        -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    }
+
+    @@-webkit-keyframes fadein {
+        from {bottom: 0; opacity: 0;} 
+        to {bottom: 30px; opacity: 1;}
+    }
+
+    @@keyframes fadein {
+        from {bottom: 0; opacity: 0;}
+        to {bottom: 30px; opacity: 1;}
+    }
+
+    @@-webkit-keyframes fadeout {
+        from {bottom: 30px; opacity: 1;} 
+        to {bottom: 0; opacity: 0;}
+    }
+
+    @@keyframes fadeout {
+        from {bottom: 30px; opacity: 1;}
+        to {bottom: 0; opacity: 0;}
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="dashboard-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1 style="font-weight: 800; font-size: 2.5rem; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0;">
+                Análisis de Nómina
+            </h1>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Procesamiento síncrono de facturas (Demostración Legada)</p>
+        </div>
+        <div>
+            <button type="button" class="btn" style="background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                Cargar XMLs
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtro de Fechas -->
+    <div class="glass-card mb-4" style="padding: 1rem 1.5rem;">
+        <form method="get" action="@Url.Action("Index", "PaginaAntigua")" class="row gx-3 gy-2 align-items-end">
+            <div class="col-sm-4">
+                <label for="fechaInicio" class="form-label" style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Fecha Inicio</label>
+                <input type="date" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-color); color-scheme: dark;" id="fechaInicio" name="fechaInicio" value="@ViewBag.FechaInicio" />
+            </div>
+            <div class="col-sm-4">
+                <label for="fechaFin" class="form-label" style="color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase;">Fecha Fin</label>
+                <input type="date" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-color); color-scheme: dark;" id="fechaFin" name="fechaFin" value="@ViewBag.FechaFin" />
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn w-100" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border-color); padding: 0.5rem; transition: background 0.2s;">
+                    Filtrar Reporte
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger glass-card" style="border-left: 4px solid #ff416c; color: #ff416c; background: rgba(255, 65, 108, 0.1);">
+            @ViewBag.Error
+        </div>
+    }
+
+    <!-- KPIs -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="glass-card">
+                <div class="kpi-title">Total Percepciones</div>
+                <h2 class="kpi-value">@Model.GranTotalPercepciones.ToString("C")</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card">
+                <div class="kpi-title">Total Deducciones</div>
+                <h2 class="kpi-value deduccion">@Model.GranTotalDeducciones.ToString("C")</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card">
+                <div class="kpi-title">Gran Total Neto</div>
+                <h2 class="kpi-value neto">@Model.GranTotalNeto.ToString("C")</h2>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="glass-card">
+                <div class="kpi-title">Total Recibos</div>
+                <h2 class="kpi-value" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">@Model.Nominas.Count</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="glass-card">
+                <h3 style="font-size: 1.25rem; margin-bottom: 1rem; color: #fff;">Costo por Departamento</h3>
+                <div class="chart-container">
+                    <canvas id="deptoChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="glass-card">
+                <h3 style="font-size: 1.25rem; margin-bottom: 1rem; color: #fff;">Percepciones vs Deducciones Globales</h3>
+                <div class="chart-container">
+                    <canvas id="resumeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="glass-card table-container">
+                <h3 style="font-size: 1.25rem; margin-bottom: 1rem; color: #fff;">Detalle de Recibos</h3>
+                <table class="table-glass">
+                    <thead>
+                        <tr>
+                            <th>Fecha Pago</th>
+                            <th>Empleado</th>
+                            <th>Departamento</th>
+                            <th>Puesto</th>
+                            <th style="text-align: right;">Percepciones</th>
+                            <th style="text-align: right;">Deducciones</th>
+                            <th style="text-align: right;">Neto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Nominas)
+                        {
+                            <tr>
+                                <td>@(item.FechaPago?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td>
+                                    <div style="font-weight: 500; color: #fff;">@item.ReceptorNombre</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);">Num: @item.NumEmpleado | RFC: @item.ReceptorRFC</div>
+                                </td>
+                                <td>@(string.IsNullOrEmpty(item.Departamento) ? "-" : item.Departamento)</td>
+                                <td>@(string.IsNullOrEmpty(item.Puesto) ? "-" : item.Puesto)</td>
+                                <td style="text-align: right; color: #38ef7d;">@item.TotalPercepciones.ToString("C")</td>
+                                <td style="text-align: right; color: #ff416c;">@item.TotalDeducciones.ToString("C")</td>
+                                <td style="text-align: right; font-weight: bold; color: #00d2ff;">@item.Total.ToString("C")</td>
+                            </tr>
+                        }
+                        @if(!Model.Nominas.Any())
+                        {
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No hay registros de nómina para mostrar.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content glass-card" style="margin-bottom: 0;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+        <h5 class="modal-title" id="uploadModalLabel" style="color: #fff;">Cargar XMLs a DB</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+         <form id="uploadForm">
+            <div class="form-group mb-3">
+                <label for="xmlFiles" class="form-label" style="color: var(--text-muted);">Selecciona hasta 5000 archivos XML:</label>
+                <input type="file" class="form-control" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--border-color);" id="xmlFiles" name="xmlFiles" multiple accept=".xml" required />
+            </div>
+         </form>
+      </div>
+      <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="uploadXML()" style="background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); border: none;">Procesar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+    <div class="spinner-border" style="width: 4rem; height: 4rem; color: #00d2ff;" role="status">
+        <span class="visually-hidden">Procesando...</span>
+    </div>
+    <h3 class="mt-3">Procesando XMLs síncronamente...</h3>
+    <p>La interfaz está bloqueada hasta terminar.</p>
+</div>
+
+<!-- Snackbar -->
+<div id="snackbar">Mensaje</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function showSnackbar(message, isError) {
+            var x = document.getElementById("snackbar");
+            x.textContent = message;
+            x.style.backgroundColor = isError ? "#ff416c" : "#38ef7d";
+            x.className = "show";
+            setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+        }
+
+        async function uploadXML() {
+            const fileInput = document.getElementById('xmlFiles');
+            if (fileInput.files.length === 0) {
+                showSnackbar("Por favor selecciona al menos un archivo XML.", true);
+                return;
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('xmlFiles', fileInput.files[i]);
+            }
+
+            // Close modal safely (if bootstrap is loaded)
+            try {
+                const uploadModalEl = document.getElementById('uploadModal');
+                const uploadModal = bootstrap.Modal.getInstance(uploadModalEl);
+                if(uploadModal) uploadModal.hide();
+            } catch(e) {}
+
+            // Show loading overlay
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            try {
+                const response = await fetch('@Url.Action("ProcesarXML", "Home")', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                // Hide overlay
+                document.getElementById('loadingOverlay').style.display = 'none';
+
+                if (response.ok && result.success) {
+                    showSnackbar("Carga con éxito: " + result.message, false);
+                    document.getElementById('uploadForm').reset();
+                    // Reload page to see new data
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showSnackbar("Error de carga: " + (result.message || "Error desconocido"), true);
+                }
+            } catch (error) {
+                // Hide overlay
+                document.getElementById('loadingOverlay').style.display = 'none';
+                showSnackbar("Error de carga: Problema de conexión", true);
+            }
+        }
+
+        // Dashboard logic (charts)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Data for Depto Chart
+            const deptoLabels = @Html.Raw(Json.Encode(Model.CostoPorDepartamento.Keys));
+            const deptoData = @Html.Raw(Json.Encode(Model.CostoPorDepartamento.Values));
+            
+            // Modern color palette
+            const colors = [
+                'rgba(0, 210, 255, 0.8)',
+                'rgba(58, 123, 213, 0.8)',
+                'rgba(17, 153, 142, 0.8)',
+                'rgba(56, 239, 125, 0.8)',
+                'rgba(246, 211, 101, 0.8)',
+                'rgba(253, 160, 133, 0.8)',
+                'rgba(255, 65, 108, 0.8)',
+                'rgba(255, 75, 43, 0.8)'
+            ];
+
+            const ctxDepto = document.getElementById('deptoChart').getContext('2d');
+            new Chart(ctxDepto, {
+                type: 'doughnut',
+                data: {
+                    labels: deptoLabels,
+                    datasets: [{
+                        data: deptoData,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter' }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            // Data for Resume Chart (Bar)
+            const ctxResume = document.getElementById('resumeChart').getContext('2d');
+            new Chart(ctxResume, {
+                type: 'bar',
+                data: {
+                    labels: ['Percepciones', 'Deducciones', 'Neto'],
+                    datasets: [{
+                        label: 'Total General',
+                        data: [
+                            @Model.GranTotalPercepciones.ToString(System.Globalization.CultureInfo.InvariantCulture), 
+                            @Model.GranTotalDeducciones.ToString(System.Globalization.CultureInfo.InvariantCulture), 
+                            @Model.GranTotalNeto.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                        ],
+                        backgroundColor: [
+                            'rgba(0, 210, 255, 0.8)',
+                            'rgba(255, 65, 108, 0.8)',
+                            'rgba(56, 239, 125, 0.8)'
+                        ],
+                        borderRadius: 8,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value, index, values) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter' }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}
