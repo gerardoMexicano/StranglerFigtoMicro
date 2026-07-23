@@ -1,0 +1,151 @@
+docker exec -u root -it sql-primary //opt/mssql/bin/mssql-conf set hadr.hadrenabled 1
+docker stop sql-primary
+docker start sql-primary
+
+docker exec -u root -it sql-secondary //opt/mssql/bin/mssql-conf set hadr.hadrenabled 1
+docker stop sql-secondary
+docker start sql-secondary
+sqlcmd -S localhost,1443 -U sa -P "TuPasswordSuperSegura123!"
+USE master;
+GO
+
+-- 1. Crear la llave maestra de la base de datos (Master Key)
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'TuPasswordSuperSegura123!';
+GO
+
+-- 2. Crear el certificado de este motor
+CREATE CERTIFICATE cert_nodo_primario 
+    WITH SUBJECT = 'Certificado AG Primario';
+GO
+
+-- 3. Respaldar SOLO la llave pública en la carpeta compartida
+BACKUP CERTIFICATE cert_nodo_primario
+    TO FILE = '/backups/cert_primario.cer';
+GO
+sqlcmd -S localhost,1444 -U sa -P "TuPasswordSuperSegura123!"
+USE master;
+GO
+
+-- 1. Crear la llave maestra de la base de datos
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'TuPasswordSuperSegura123!';
+GO
+
+-- 2. Crear el certificado de este motor
+CREATE CERTIFICATE cert_nodo_secundario 
+    WITH SUBJECT = 'Certificado AG Secundario';
+GO
+
+-- 3. Respaldar la llave pública en la carpeta compartida
+BACKUP CERTIFICATE cert_nodo_secundario
+    TO FILE = '/backups/cert_secundario.cer';
+GO
+sqlcmd -S localhost,1443 -U sa -P "TuPasswordSuperSegura123!"
+-- Conéctate a tu nodo primario (puerto 1443) y ejecuta este script. Esto levantará su propio 
+-- endpoint y le dará permiso de entrada al secundario.
+USE master;
+GO
+
+-- 1. Crear el Endpoint usando su PROPIO certificado
+CREATE ENDPOINT [Hadr_endpoint] 
+    AS TCP (LISTENER_PORT = 5022)
+    FOR DATA_MIRRORING (
+        ROLE = ALL, 
+        AUTHENTICATION = CERTIFICATE cert_nodo_primario, 
+        ENCRYPTION = REQUIRED ALGORITHM AES
+    );
+GO
+
+-- Encender el endpoint
+ALTER ENDPOINT [Hadr_endpoint] STATE = STARTED;
+GO
+
+-- 2. Crear un login y usuario para el nodo secundario
+CREATE LOGIN login_secundario WITH PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE USER usr_secundario FOR LOGIN login_secundario;
+GO
+
+-- 3. Importar el certificado del SECUNDARIO y asociarlo al usuario
+CREATE CERTIFICATE cert_nodo_secundario 
+    AUTHORIZATION usr_secundario 
+    FROM FILE = '/backups/cert_secundario.cer';
+GO
+
+-- 4. Dar permiso al nodo secundario para conectarse al endpoint
+GRANT CONNECT ON ENDPOINT::[Hadr_endpoint] TO login_secundario;
+GO
+sqlcmd -S localhost,1444 -U sa -P "TuPasswordSuperSegura123!"
+--Levantará su endpoint con su certificado y dejará entrar al primario.
+
+USE master;
+GO
+
+-- 1. Crear el Endpoint usando su PROPIO certificado
+CREATE ENDPOINT [Hadr_endpoint] 
+    AS TCP (LISTENER_PORT = 5022)
+    FOR DATA_MIRRORING (
+        ROLE = ALL, 
+        AUTHENTICATION = CERTIFICATE cert_nodo_secundario, 
+        ENCRYPTION = REQUIRED ALGORITHM AES
+    );
+GO
+
+-- Encender el endpoint
+ALTER ENDPOINT [Hadr_endpoint] STATE = STARTED;
+GO
+
+-- 2. Crear un login y usuario para el nodo primario
+CREATE LOGIN login_primario WITH PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE USER usr_primario FOR LOGIN login_primario;
+GO
+
+-- 3. Importar el certificado del PRIMARIO y asociarlo al usuario
+CREATE CERTIFICATE cert_nodo_primario 
+    AUTHORIZATION usr_primario 
+    FROM FILE = '/backups/cert_primario.cer';
+GO
+
+-- 4. Dar permiso al nodo primario para conectarse al endpoint
+GRANT CONNECT ON ENDPOINT::[Hadr_endpoint] TO login_primario;
+GO
+sqlcmd -S localhost,1443 -U sa -P "TuPasswordSuperSegura123!"
+--aplicar a ambos
+CREATE LOGIN AgAdmin WITH PASSWORD = 'TuPasswordSuperSegura123!';
+ALTER SERVER ROLE sysadmin ADD MEMBER AgAdmin;
+-- CONTAINED: La cláusula que le dice a SQL que cree las bases de datos de sistema aisladas.
+-- CLUSTER_TYPE = NONE: Le indica que no busque un clúster de Windows (WSFC) ni de Linux (Pacemaker) para gestionar la infraestructura.
+-- SEEDING_MODE = AUTOMATIC: Nos ahorra tener que hacer el proceso manual de backup/restore por cada base de datos que agreguemos en el futuro; SQL lo hará por la red.
+USE master;
+GO
+
+CREATE AVAILABILITY GROUP [AG_Laboratorio]
+WITH (
+    CONTAINED, 
+    CLUSTER_TYPE = NONE
+)
+FOR REPLICA ON
+N'sql-primary' WITH 
+(
+    ENDPOINT_URL = N'tcp://sql-primary:5022',
+    AVAILABILITY_MODE = SYNCHRONOUS_COMMIT,
+    FAILOVER_MODE = MANUAL,
+    SEEDING_MODE = AUTOMATIC
+),
+N'sql-secondary' WITH 
+(
+    ENDPOINT_URL = N'tcp://sql-secondary:5022',
+    AVAILABILITY_MODE = SYNCHRONOUS_COMMIT,
+    FAILOVER_MODE = MANUAL,
+    SEEDING_MODE = AUTOMATIC
+);
+GO
+sqlcmd -S localhost,1444 -U sa -P "TuPasswordSuperSegura123!"
+USE master;
+GO
+
+-- Unirse al grupo
+ALTER AVAILABILITY GROUP [AG_Laboratorio] JOIN WITH (CLUSTER_TYPE = NONE);
+GO
+
+-- Dar permiso para que el primario envíe las bases de datos
+ALTER AVAILABILITY GROUP [AG_Laboratorio] GRANT CREATE ANY DATABASE;
+GO
