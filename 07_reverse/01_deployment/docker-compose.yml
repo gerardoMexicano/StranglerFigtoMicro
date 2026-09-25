@@ -1,0 +1,26 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "${NGINX_HTTP_PORT}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    networks:
+      - edge
+  gateway:
+    image: gateway:local
+    container_name: gateway
+    networks:
+      - edge
+      - backend
+
+networks:
+  edge:
+    name: edge
+    driver: bridge
+  
+  backend:
+    name: backend
+    driver: bridge

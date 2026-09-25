@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+
+  sql-primary:
+    image: ${SQLSERVER_IMAGE}
+
+    container_name: sql-primary
+
+    hostname: sql-primary
+
+    restart: unless-stopped
+
+    environment:
+      ACCEPT_EULA: "Y"
+
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+
+      MSSQL_PID: ${MSSQL_PID}
+
+      MSSQL_ENABLE_HADR: "1"
+
+      TZ: ${TZ}
+
+    ports:
+      - "${PRIMARY_SQL_PORT}:1433"
+
+    volumes:
+      # SQL DATA
+      - ${PRIMARY_DATA_PATH}/data:/var/opt/mssql/data
+      - ${PRIMARY_DATA_PATH}/log:/var/opt/mssql/log
+
+      # Scripts
+      - ${SCRIPTS_PATH}:/db
+
+      # Backups
+      - ${BACKUP_PATH}:/backups
+
+
+    shm_size: 4gb
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${MSSQL_SA_PASSWORD}' -C -Q 'SELECT 1' || exit 1"
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+    networks:
+      - sqlnet
+
+  sql-secondary:
+    image: ${SQLSERVER_IMAGE}
+
+    container_name: sql-secondary
+
+    hostname: sql-secondary
+
+    restart: unless-stopped
+
+    environment:
+      ACCEPT_EULA: "Y"
+
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+
+      MSSQL_PID: ${MSSQL_PID}
+
+      MSSQL_ENABLE_HADR: "1"
+
+      TZ: ${TZ}
+
+    ports:
+      - "${SECONDARY_SQL_PORT}:1433"
+
+    volumes:
+      # SQL DATA
+      - ${SECONDARY_DATA_PATH}/data:/var/opt/mssql/data
+      - ${SECONDARY_DATA_PATH}/log:/var/opt/mssql/log
+
+      # Scripts
+      - ${SCRIPTS_PATH}:/db
+
+      # Backups
+      - ${BACKUP_PATH}:/backups
+
+    shm_size: 4gb
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${MSSQL_SA_PASSWORD}' -C -Q 'SELECT 1' || exit 1"
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+    networks:
+      - sqlnet
+
+networks:
+  sqlnet:
+    driver: bridge

@@ -1,0 +1,1 @@
+sqlcmd -S localhost,1444 -U sa -P "TuPasswordSuperSegura123!"
