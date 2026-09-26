@@ -1,0 +1,69 @@
+{
+  "realm": "${IMPORT_REALM}",
+  "displayName": "Laboratorio",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["es", "en"],
+  "defaultLocale": "es",
+  "roles": {
+    "realm": [
+      { "name": "usuario", "description": "Acceso general a la aplicación" },
+      { "name": "admin", "description": "Administración de la aplicación" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "${IMPORT_FRONTEND_CLIENT_ID}",
+      "name": "Frontend Angular",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "${IMPORT_APP_PUBLIC_URL}",
+      "baseUrl": "/",
+      "redirectUris": ["${IMPORT_APP_PUBLIC_URL}/*"],
+      "webOrigins": ["${IMPORT_APP_PUBLIC_URL}"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${IMPORT_APP_PUBLIC_URL}/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "${IMPORT_API_CLIENT_ID}",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "${IMPORT_API_CLIENT_ID}",
+      "name": "API Backend",
+      "description": "Resource server: solo se usa como audiencia de los access tokens",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ]
+}

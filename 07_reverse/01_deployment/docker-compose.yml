@@ -1,26 +1,149 @@
+# ==============================================================================
+# Stack de despliegue: Nginx (edge) + Gateway YARP + Keycloak (+ Postgres)
+#
+# Un solo compose para todos los ambientes; lo que cambia vive en el env file:
+#   docker network create edge; docker network create backend   (una sola vez por host)
+#   docker compose --env-file .env.development up -d --build
+#   docker compose --env-file .env.testing     up -d --build
+#   docker compose --env-file .env.production  up -d --build
+#
+# Plantilla de variables: template.env.deployment
+# ==============================================================================
+name: ${COMPOSE_PROJECT_NAME:?Define COMPOSE_PROJECT_NAME en el env file}
+
+# Contrato OIDC para los servicios que validen tokens de Keycloak.
+# - Authority: issuer público (lo que viene en el claim "iss" del token).
+# - MetadataAddress: discovery por la red interna (el contenedor no puede
+#   resolver el dominio público). Funciona gracias a KC_HOSTNAME_BACKCHANNEL_DYNAMIC.
+x-oidc-env: &oidc-env
+  Oidc__Authority: ${KC_HOSTNAME}/realms/${KC_REALM}
+  Oidc__MetadataAddress: http://keycloak:8080${KC_HTTP_RELATIVE_PATH}/realms/${KC_REALM}/.well-known/openid-configuration
+  Oidc__Audience: ${KC_API_CLIENT_ID}
+
 services:
   nginx:
     image: nginx:alpine
-    container_name: nginx
+    restart: unless-stopped
     ports:
-      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTP_PORT:-80}:80"
+    environment:
+      # Solo estas variables se sustituyen en nginx/templates/*.template
+      APP_DOMAIN: ${APP_DOMAIN}
+      KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH}
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
+    depends_on:
+      - gateway
+      - keycloak
     networks:
       - edge
+
   gateway:
-    image: gateway:local
-    container_name: gateway
+    image: gateway:${APP_ENV}
+    build:
+      context: ./Gateway
+    restart: unless-stopped
+    environment:
+      <<: *oidc-env
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ReverseProxy__Clusters__legacy-cluster__Destinations__legacy__Address: ${LEGACY_BASE_URL}
+      ReverseProxy__Clusters__taxes-cluster__Destinations__taxes__Address: ${TAXES_BASE_URL}
     networks:
       - edge
       - backend
 
+  keycloak:
+    image: ${KEYCLOAK_IMAGE}
+    restart: unless-stopped
+    # start-dev en development, start en testing/production
+    command: ["${KC_COMMAND}", "--import-realm"]
+    environment:
+      # Base de datos
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KC_DB_NAME}
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?Define KC_DB_PASSWORD}
+
+      # Hostname / proxy: TLS y dominio los resuelve Nginx
+      KC_HOSTNAME: ${KC_HOSTNAME}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH}
+      KC_PROXY_HEADERS: xforwarded
+
+      # Observabilidad (puerto de management 9000, no se publica)
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_LOG_LEVEL: ${KC_LOG_LEVEL:-info}
+
+      # Admin inicial (solo se usa si el realm master aún no tiene admin)
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?Define KC_BOOTSTRAP_ADMIN_PASSWORD}
+
+      # Placeholders usados por keycloak/import/*.json
+      # (sin prefijo KC_: Keycloak interpreta KC_* como opciones propias)
+      IMPORT_APP_PUBLIC_URL: ${APP_PUBLIC_URL}
+      IMPORT_REALM: ${KC_REALM}
+      IMPORT_FRONTEND_CLIENT_ID: ${KC_FRONTEND_CLIENT_ID}
+      IMPORT_API_CLIENT_ID: ${KC_API_CLIENT_ID}
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      # La imagen no trae curl: petición HTTP a mano contra el puerto de management
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET ${KC_HTTP_RELATIVE_PATH}/health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - edge      # Nginx publica /auth
+      - backend   # APIs validan tokens por la red interna
+      - identity  # Postgres
+
+  keycloak-db:
+    image: ${KC_DB_IMAGE}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KC_DB_NAME}
+      POSTGRES_USER: ${KC_DB_USERNAME}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?Define KC_DB_PASSWORD}
+      TZ: ${TZ:-America/Mexico_City}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USERNAME} -d ${KC_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - identity
+
+volumes:
+  keycloak_db_data:
+
 networks:
+  # Redes compartidas entre stacks: se crean una vez y ningún proyecto es dueño,
+  # así un "down" no las borra ni choca con otro compose que las use.
+  #   docker network create edge
+  #   docker network create backend
   edge:
     name: edge
-    driver: bridge
-  
+    external: true
+
   backend:
     name: backend
+    external: true
+
+  # Solo Keycloak <-> Postgres, sin salida a internet
+  identity:
     driver: bridge
+    internal: true
