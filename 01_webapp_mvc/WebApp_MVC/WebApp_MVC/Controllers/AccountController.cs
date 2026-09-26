@@ -1,6 +1,8 @@
 using System;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Security.Cryptography;
+using System.Text;
 using System.Web.Mvc;
 using System.Web.Security;
 
@@ -37,25 +39,81 @@ namespace WebApp_MVC.Controllers
             }
         }
 
+        // Hash: SHA-512( salt + UTF-16LE(password) ), igual que sqlserver/db/03_usuarios_hash_expand.sql
         private bool ValidarCredenciales(string usuario, string password)
         {
             string conexionString = ConfigurationManager.ConnectionStrings["ConexionDB"].ConnectionString;
 
             using (SqlConnection conexion = new SqlConnection(conexionString))
             {
-                string query = "SELECT COUNT(*) FROM Usuarios WHERE username = @usuario AND password = @password";
+                conexion.Open();
+
+                int id;
+                byte[] salt;
+                byte[] hashGuardado;
+
+                string query = "SELECT id, password_salt, password_hash FROM usuarios WHERE username = @usuario AND activo = 1";
 
                 using (SqlCommand comando = new SqlCommand(query, conexion))
                 {
                     comando.Parameters.AddWithValue("@usuario", usuario);
-                    comando.Parameters.AddWithValue("@password", password);
 
-                    conexion.Open();
-                    int resultado = Convert.ToInt32(comando.ExecuteScalar());
+                    using (SqlDataReader lector = comando.ExecuteReader())
+                    {
+                        if (!lector.Read() || lector.IsDBNull(1) || lector.IsDBNull(2))
+                        {
+                            return false;
+                        }
 
-                    return resultado > 0;
+                        id = lector.GetInt32(0);
+                        salt = (byte[])lector[1];
+                        hashGuardado = (byte[])lector[2];
+                    }
                 }
+
+                if (!SonIguales(CalcularHash(salt, password), hashGuardado))
+                {
+                    return false;
+                }
+
+                using (SqlCommand comando = new SqlCommand("UPDATE usuarios SET ultimo_login = SYSDATETIME() WHERE id = @id", conexion))
+                {
+                    comando.Parameters.AddWithValue("@id", id);
+                    comando.ExecuteNonQuery();
+                }
+
+                return true;
             }
+        }
+
+        private static byte[] CalcularHash(byte[] salt, string password)
+        {
+            byte[] passwordBytes = Encoding.Unicode.GetBytes(password);
+            byte[] entrada = new byte[salt.Length + passwordBytes.Length];
+            Buffer.BlockCopy(salt, 0, entrada, 0, salt.Length);
+            Buffer.BlockCopy(passwordBytes, 0, entrada, salt.Length, passwordBytes.Length);
+
+            using (SHA512 sha = SHA512.Create())
+            {
+                return sha.ComputeHash(entrada);
+            }
+        }
+
+        // Comparación en tiempo constante (.NET Framework no trae CryptographicOperations.FixedTimeEquals)
+        private static bool SonIguales(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length)
+            {
+                return false;
+            }
+
+            int diferencia = 0;
+            for (int i = 0; i < a.Length; i++)
+            {
+                diferencia |= a[i] ^ b[i];
+            }
+
+            return diferencia == 0;
         }
 
         [Authorize]
