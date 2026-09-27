@@ -1,0 +1,126 @@
+{
+  "realm": "${IMPORT_REALM}",
+  "displayName": "Laboratorio",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": true,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["es", "en"],
+  "defaultLocale": "es",
+  "roles": {
+    "realm": [
+      { "name": "usuario", "description": "Acceso general a la aplicación" },
+      { "name": "admin", "description": "Administración de la aplicación" },
+      { "name": "invitado", "description": "Acceso de solo consulta" }
+    ]
+  },
+  "smtpServer": {
+    "host": "${IMPORT_SMTP_HOST}",
+    "port": "${IMPORT_SMTP_PORT}",
+    "from": "${IMPORT_SMTP_FROM}",
+    "fromDisplayName": "Laboratorio",
+    "auth": "${IMPORT_SMTP_AUTH}",
+    "user": "${IMPORT_SMTP_USER}",
+    "password": "${IMPORT_SMTP_PASSWORD}",
+    "ssl": "${IMPORT_SMTP_SSL}",
+    "starttls": "${IMPORT_SMTP_STARTTLS}"
+  },
+  "clients": [
+    {
+      "clientId": "${IMPORT_FRONTEND_CLIENT_ID}",
+      "name": "Frontend Angular",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "${IMPORT_APP_PUBLIC_URL}",
+      "baseUrl": "/",
+      "redirectUris": ["${IMPORT_APP_PUBLIC_URL}/*"],
+      "webOrigins": ["${IMPORT_APP_PUBLIC_URL}"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${IMPORT_APP_PUBLIC_URL}/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "${IMPORT_API_CLIENT_ID}",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "${IMPORT_API_CLIENT_ID}",
+      "name": "API Backend",
+      "description": "Resource server: solo se usa como audiencia de los access tokens",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+    {
+      "clientId": "legacy-cutover",
+      "name": "Corte de migración legacy",
+      "description": "Cuenta de servicio del comando 'corte' de legacy-auth (fin de la ventana de migración)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${IMPORT_CUTOVER_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-legacy-cutover",
+      "enabled": true,
+      "serviceAccountClientId": "legacy-cutover",
+      "clientRoles": {
+        "realm-management": ["view-realm", "view-users", "query-users", "manage-users"]
+      }
+    }
+  ],
+  "components": {
+    "org.keycloak.storage.UserStorageProvider": [
+      {
+        "name": "legacy-migration",
+        "providerId": "User migration using a REST client",
+        "subComponents": {},
+        "config": {
+          "enabled": ["true"],
+          "priority": ["0"],
+          "cachePolicy": ["DEFAULT"],
+          "URI": ["${IMPORT_LEGACY_AUTH_URI}"],
+          "API_TOKEN_ENABLED": ["true"],
+          "API_TOKEN": ["${IMPORT_LEGACY_AUTH_TOKEN}"],
+          "ROLE_MAP": ["admin:admin", "usuario:usuario", "invitado:invitado"],
+          "MIGRATE_UNMAPPED_ROLES": ["false"],
+          "SEVER_FEDERATION_LINK": ["true"]
+        }
+      }
+    ]
+  }
+}
