@@ -10,7 +10,9 @@ vive en un env file por ambiente.
                  │                     │  red identity (interna)
                  └──/*──► gateway      └──► keycloak-db (Postgres)
                          │  red backend
-                         └──► legacy / taxes (Strangler Fig)
+                         ├──► legacy / taxes (Strangler Fig)
+   keycloak ── plugin ──► legacy-auth ──► SQL Server legacy (usuarios)   [temporal]
+   keycloak ── SMTP ────► mailpit (solo development) / SMTP real
 ```
 
 ## Arranque
@@ -48,6 +50,7 @@ Con `APP_DOMAIN=192.168.50.10` (la IP de la máquina, para entrar desde otras PC
 - App / gateway: http://192.168.50.10/
 - Consola admin de Keycloak: http://192.168.50.10/auth/admin/ (usuario `KC_BOOTSTRAP_ADMIN_USERNAME`)
 - Discovery OIDC: http://192.168.50.10/auth/realms/laboratorio/.well-known/openid-configuration
+- Bandeja de Mailpit (correos de verificación / restablecer contraseña): http://localhost:8025
 
 ## Realm importado
 
@@ -57,7 +60,14 @@ Los valores `${IMPORT_*}` salen del env file.
 
 - `frontend-spa`: cliente público, Authorization Code + PKCE (S256), redirect `${APP_PUBLIC_URL}/*`.
 - `backend-api`: resource server; el frontend emite access tokens con `aud: backend-api`.
-- Roles de realm: `usuario`, `admin`.
+- `legacy-cutover`: cuenta de servicio del comando `corte` (permisos mínimos sobre usuarios).
+- Roles de realm: `usuario`, `admin`, `invitado` (los mismos valores que `usuarios.rol` del legacy).
+- `verifyEmail: true` y SMTP tomado de las variables `SMTP_*`.
+- Proveedor de migración `legacy-migration` (ver abajo).
+
+Keycloak se construye con `keycloak/Dockerfile`: imagen oficial + plugin
+[keycloak-user-migration](https://github.com/daniel-frak/keycloak-user-migration) 6.2.4
+(verificado por SHA-256).
 
 Para reimportar después de editar el JSON en development:
 `docker compose --env-file .env.development down -v` (borra la BD de Keycloak).
@@ -72,3 +82,43 @@ Los servicios en la red `backend` reciben (ver `x-oidc-env` en el compose):
 
 El discovery interno devuelve el issuer público pero `jwks_uri` interno
 (`KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`), así que la API valida tokens sin salir a internet.
+
+## Migración de usuarios al primer login
+
+```
+1er login de "juan" (no existe en Keycloak)
+  Keycloak ──GET  /user-migration-support/juan──► legacy-auth ──► usuarios (username, rol, activo)
+  Keycloak ──POST /user-migration-support/juan──► legacy-auth ──► valida SHA-512(salt + password)
+  válida → Keycloak guarda la contraseña con SU hash (argon2) y corta la liga con el legacy
+         → pide email/nombre (perfil obligatorio) → manda correo de verificación → token
+2º login → solo Keycloak; el legacy ya no participa
+```
+
+- `LegacyAuth/` (.NET 10) implementa los dos endpoints. Solo está en la red `backend`,
+  sin puertos publicados, y exige `Authorization: Bearer ${LEGACY_AUTH_API_TOKEN}`.
+- Lee la BD legacy con `app_lector` (`LEGACY_DB_CONNECTION`). Requiere haber corrido
+  `sqlserver/db/03_usuarios_hash_expand.sql` en esa instancia.
+- El rol del legacy (`usuarios.rol`) se asigna como rol de realm.
+- Usuarios con `activo = 0` no pueden migrar.
+
+Avance de la migración: en la consola, *Users* muestra a los migrados; los que siguen
+ligados al legacy tienen *Federation link* = `legacy-migration`.
+
+## Corte (fin de la ventana, p. ej. mes 6)
+
+1. Consola de Keycloak → *User federation* → `legacy-migration` → **Enabled: off** → *Save*.
+2. Simulación (no cambia nada, muestra el plan por usuario):
+   ```bash
+   docker compose --env-file .env.<ambiente> run --rm legacy-auth corte
+   ```
+3. Aplicar:
+   ```bash
+   docker compose --env-file .env.<ambiente> run --rm legacy-auth corte --aplicar
+   ```
+
+Resultado: los migrados no se tocan; los que nunca completaron el login quedan en Keycloak
+**deshabilitados y con su rol**. Se reactivan desde la mesa de ayuda (el admin captura su
+email y envía *Reset password* desde la consola). Es idempotente: se puede volver a correr.
+
+Después del corte se puede quitar el servicio `legacy-auth`, el cliente `legacy-cutover`
+y el proveedor `legacy-migration`.

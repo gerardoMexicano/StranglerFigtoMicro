@@ -7,6 +7,7 @@
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
+  "verifyEmail": true,
   "bruteForceProtected": true,
   "accessTokenLifespan": 300,
   "ssoSessionIdleTimeout": 1800,
@@ -16,8 +17,20 @@
   "roles": {
     "realm": [
       { "name": "usuario", "description": "Acceso general a la aplicación" },
-      { "name": "admin", "description": "Administración de la aplicación" }
+      { "name": "admin", "description": "Administración de la aplicación" },
+      { "name": "invitado", "description": "Acceso de solo consulta" }
     ]
+  },
+  "smtpServer": {
+    "host": "${IMPORT_SMTP_HOST}",
+    "port": "${IMPORT_SMTP_PORT}",
+    "from": "${IMPORT_SMTP_FROM}",
+    "fromDisplayName": "Laboratorio",
+    "auth": "${IMPORT_SMTP_AUTH}",
+    "user": "${IMPORT_SMTP_USER}",
+    "password": "${IMPORT_SMTP_PASSWORD}",
+    "ssl": "${IMPORT_SMTP_SSL}",
+    "starttls": "${IMPORT_SMTP_STARTTLS}"
   },
   "clients": [
     {
@@ -64,6 +77,50 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false
+    },
+    {
+      "clientId": "legacy-cutover",
+      "name": "Corte de migración legacy",
+      "description": "Cuenta de servicio del comando 'corte' de legacy-auth (fin de la ventana de migración)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${IMPORT_CUTOVER_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
     }
-  ]
+  ],
+  "users": [
+    {
+      "username": "service-account-legacy-cutover",
+      "enabled": true,
+      "serviceAccountClientId": "legacy-cutover",
+      "clientRoles": {
+        "realm-management": ["view-realm", "view-users", "query-users", "manage-users"]
+      }
+    }
+  ],
+  "components": {
+    "org.keycloak.storage.UserStorageProvider": [
+      {
+        "name": "legacy-migration",
+        "providerId": "User migration using a REST client",
+        "subComponents": {},
+        "config": {
+          "enabled": ["true"],
+          "priority": ["0"],
+          "cachePolicy": ["DEFAULT"],
+          "URI": ["${IMPORT_LEGACY_AUTH_URI}"],
+          "API_TOKEN_ENABLED": ["true"],
+          "API_TOKEN": ["${IMPORT_LEGACY_AUTH_TOKEN}"],
+          "ROLE_MAP": ["admin:admin", "usuario:usuario", "invitado:invitado"],
+          "MIGRATE_UNMAPPED_ROLES": ["false"],
+          "SEVER_FEDERATION_LINK": ["true"]
+        }
+      }
+    ]
+  }
 }

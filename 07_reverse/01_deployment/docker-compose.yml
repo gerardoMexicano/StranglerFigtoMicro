@@ -54,7 +54,12 @@ services:
       - backend
 
   keycloak:
-    image: ${KEYCLOAK_IMAGE}
+    # Imagen oficial + plugin de migración de usuarios (keycloak/Dockerfile)
+    image: keycloak-lab:${APP_ENV}
+    build:
+      context: ./keycloak
+      args:
+        KEYCLOAK_IMAGE: ${KEYCLOAK_IMAGE}
     restart: unless-stopped
     # start-dev en development, start en testing/production
     command: ["${KC_COMMAND}", "--import-realm"]
@@ -87,6 +92,17 @@ services:
       IMPORT_REALM: ${KC_REALM}
       IMPORT_FRONTEND_CLIENT_ID: ${KC_FRONTEND_CLIENT_ID}
       IMPORT_API_CLIENT_ID: ${KC_API_CLIENT_ID}
+      IMPORT_LEGACY_AUTH_URI: http://legacy-auth:8080/user-migration-support
+      IMPORT_LEGACY_AUTH_TOKEN: ${LEGACY_AUTH_API_TOKEN:?Define LEGACY_AUTH_API_TOKEN}
+      IMPORT_CUTOVER_CLIENT_SECRET: ${KC_CUTOVER_CLIENT_SECRET:?Define KC_CUTOVER_CLIENT_SECRET}
+      IMPORT_SMTP_HOST: ${SMTP_HOST}
+      IMPORT_SMTP_PORT: ${SMTP_PORT}
+      IMPORT_SMTP_FROM: ${SMTP_FROM}
+      IMPORT_SMTP_AUTH: ${SMTP_AUTH}
+      IMPORT_SMTP_USER: ${SMTP_USER}
+      IMPORT_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      IMPORT_SMTP_SSL: ${SMTP_SSL}
+      IMPORT_SMTP_STARTTLS: ${SMTP_STARTTLS}
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import:ro
     depends_on:
@@ -126,6 +142,37 @@ services:
       retries: 10
     networks:
       - identity
+
+  # Servicio TEMPORAL: valida contra el legacy a los usuarios que aún no migran.
+  # Solo en la red interna; solo Keycloak lo llama (token Bearer compartido).
+  # Corte (mes 6):  docker compose --env-file .env.<ambiente> run --rm legacy-auth corte [--aplicar]
+  legacy-auth:
+    image: legacy-auth:${APP_ENV}
+    build:
+      context: ./LegacyAuth
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ConnectionStrings__Legacy: ${LEGACY_DB_CONNECTION:?Define LEGACY_DB_CONNECTION}
+      LegacyAuth__ApiToken: ${LEGACY_AUTH_API_TOKEN:?Define LEGACY_AUTH_API_TOKEN}
+      Corte__KeycloakUrl: http://keycloak:8080${KC_HTTP_RELATIVE_PATH}
+      Corte__Realm: ${KC_REALM}
+      Corte__ProviderName: legacy-migration
+      Corte__ClientId: legacy-cutover
+      Corte__ClientSecret: ${KC_CUTOVER_CLIENT_SECRET:?Define KC_CUTOVER_CLIENT_SECRET}
+    networks:
+      - backend
+
+  # Solo development (COMPOSE_PROFILES=mail): atrapa todos los correos de Keycloak.
+  # Bandeja: http://localhost:${MAILPIT_UI_PORT:-8025}
+  mailpit:
+    image: axllent/mailpit:v1.31
+    profiles: ["mail"]
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    networks:
+      - backend
 
 volumes:
   keycloak_db_data:
