@@ -28,7 +28,6 @@ obj/
 packages/
 *.nupkg
 *.nuspec
-packages.config
 
 # Archivos temporales de IIS Express
 .vs/config/

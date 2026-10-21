@@ -29,7 +29,6 @@ obj/
 packages/
 *.nupkg
 *.nuspec
-packages.config
 project.lock.json
 project.assets.json
 
