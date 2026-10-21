@@ -61,6 +61,10 @@ Los valores `${IMPORT_*}` salen del env file.
 - `frontend-spa`: cliente público, Authorization Code + PKCE (S256), redirect `${APP_PUBLIC_URL}/*`.
 - `backend-api`: resource server; el frontend emite access tokens con `aud: backend-api`.
 - `legacy-cutover`: cuenta de servicio del comando `corte` (permisos mínimos sobre usuarios).
+- `legacy-mvc` / `legacy-webforms`: apps legacy (OWIN), confidenciales, Authorization Code + PKCE (S256).
+  Solo vuelven a `<url>/signin-oidc`, con dos URLs por app: la del gateway (`LEGACY_*_URL`: MVC en `/taxes`,
+  WebForms en `/legacy`) y la de IIS Express (`LEGACY_*_DEV_URL`). El SSO entre ellas y con `frontend-spa`
+  lo da la sesión de Keycloak.
 - Roles de realm: `usuario`, `admin`, `invitado` (los mismos valores que `usuarios.rol` del legacy).
 - `verifyEmail: true` y SMTP tomado de las variables `SMTP_*`.
 - Proveedor de migración `legacy-migration` (ver abajo).

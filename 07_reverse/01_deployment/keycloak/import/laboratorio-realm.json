@@ -91,6 +91,46 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true
+    },
+    {
+      "clientId": "legacy-mvc",
+      "name": "Legacy MVC",
+      "description": "WebApp_MVC (.NET Framework, OWIN): Authorization Code + PKCE, confidencial",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${IMPORT_LEGACY_MVC_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "baseUrl": "${IMPORT_LEGACY_MVC_URL}/",
+      "redirectUris": ["${IMPORT_LEGACY_MVC_URL}/signin-oidc", "${IMPORT_LEGACY_MVC_DEV_URL}/signin-oidc"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${IMPORT_LEGACY_MVC_URL}/##${IMPORT_LEGACY_MVC_DEV_URL}/"
+      }
+    },
+    {
+      "clientId": "legacy-webforms",
+      "name": "Legacy WebForms",
+      "description": "WebApp_WebForms (.NET Framework, OWIN): Authorization Code + PKCE, confidencial",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${IMPORT_LEGACY_WEBFORMS_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "baseUrl": "${IMPORT_LEGACY_WEBFORMS_URL}/",
+      "redirectUris": ["${IMPORT_LEGACY_WEBFORMS_URL}/signin-oidc", "${IMPORT_LEGACY_WEBFORMS_DEV_URL}/signin-oidc"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${IMPORT_LEGACY_WEBFORMS_URL}/##${IMPORT_LEGACY_WEBFORMS_DEV_URL}/"
+      }
     }
   ],
   "users": [
