@@ -3,8 +3,11 @@ using System.Configuration;
 using System.Data.SqlClient;
 using System.Security.Cryptography;
 using System.Text;
+using System.Web;
 using System.Web.Mvc;
 using System.Web.Security;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.OpenIdConnect;
 
 namespace WebApp_MVC.Controllers
 {
@@ -12,9 +15,23 @@ namespace WebApp_MVC.Controllers
     public class AccountController : Controller
     {
         // GET: Account/Login
-        public ActionResult Login()
+        // Ya no pide contraseña: manda al usuario a Keycloak y al volver lo deja en returnUrl
+        public ActionResult Login(string returnUrl)
         {
-            return View();
+            // Solo rutas de esta app, para no convertir el login en un redirect abierto
+            string destino = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Action("Menu", "Home");
+
+            if (User.Identity.IsAuthenticated)
+            {
+                return Redirect(destino);
+            }
+
+            HttpContext.GetOwinContext().Authentication.Challenge(
+                new AuthenticationProperties { RedirectUri = destino },
+                OpenIdConnectAuthenticationDefaults.AuthenticationType);
+
+            // El 401 es la señal para el middleware OIDC: lo convierte en el redirect a Keycloak
+            return new HttpUnauthorizedResult();
         }
 
         // POST: Account/Login

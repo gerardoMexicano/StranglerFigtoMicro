@@ -174,3 +174,6 @@ package-lock.json
 # Archivos de client-side (bundles generados)
 Scripts/_references.js
 Content/Site.css.map
+
+# Secretos locales de la app (plantilla versionada: Secrets.config.example)
+Secrets.config
