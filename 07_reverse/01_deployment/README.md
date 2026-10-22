@@ -87,6 +87,26 @@ Los servicios en la red `backend` reciben (ver `x-oidc-env` en el compose):
 El discovery interno devuelve el issuer público pero `jwks_uri` interno
 (`KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`), así que la API valida tokens sin salir a internet.
 
+## Apps legacy (MVC / WebForms) con Keycloak
+
+`01_webapp_mvc` y `02_webapp_webforms` (.NET Framework 4.8.1) inician sesión con Keycloak vía
+OWIN (Katana 4.2.2 + IdentityModel 5.7.0): Authorization Code + PKCE, sin formulario de contraseña.
+
+```
+sin sesión ─► Account/Login (MVC) o Login.aspx (WebForms) ─► Keycloak ─► <app>/signin-oidc
+           ─► cookie de la app (.AUTH.MVC / .AUTH.WEBFORMS) ─► [Authorize] / Request.IsAuthenticated
+logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_hint) ─► post_logout_redirect_uri
+```
+
+- Pipeline en `Startup.cs` / `Startup.vb`; `Web.config` con `<authentication mode="None" />`.
+- Configuración en `appSettings` del `Web.config`: `oidc:Authority`, `oidc:ClientId`, `oidc:RedirectUri`,
+  `oidc:PostLogoutRedirectUri`, `oidc:RequireHttpsMetadata` y `auth:SesionMinutos` (sesión local deslizante).
+- El secreto del cliente va en `Secrets.config` junto al `Web.config` (ignorado por git; plantilla
+  `Secrets.config.example`). Es el mismo valor que `LEGACY_MVC_CLIENT_SECRET` / `LEGACY_WEBFORMS_CLIENT_SECRET`.
+- `User.Identity.Name` es el username del legacy (claim `preferred_username`).
+- SSO: cada app tiene su cookie; entrar en una deja abierta la sesión de Keycloak y la otra entra sin
+  pedir contraseña. Cerrar sesión en cualquiera cierra la de Keycloak.
+
 ## Migración de usuarios al primer login
 
 ```
