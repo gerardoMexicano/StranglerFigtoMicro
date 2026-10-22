@@ -20,8 +20,6 @@ obj/
 
 # Archivos de WebForms específicos
 *.aspx.cs?  # .aspx.vb (archivos code-behind compilados)
-*.designer.vb
-*.resx
 *.resources
 
 # Archivos de paquetes NuGet
