@@ -7,6 +7,7 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.Security;
 using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.OpenIdConnect;
 
 namespace WebApp_MVC.Controllers
@@ -133,11 +134,21 @@ namespace WebApp_MVC.Controllers
             return diferencia == 0;
         }
 
-        [Authorize]
-        public ActionResult Logout()
+        // Cierra las DOS sesiones: la cookie de esta app y la de Keycloak.
+        // Si solo se borrara la cookie, el siguiente clic volvería a entrar por SSO sin pedir contraseña.
+        public void Logout()
         {
-            FormsAuthentication.SignOut();
-            return RedirectToAction("Login", "Account");
+            if (!User.Identity.IsAuthenticated)
+            {
+                Response.Redirect(Url.Content("~/"));
+                return;
+            }
+
+            // El middleware OIDC convierte esto en el redirect al end_session_endpoint de Keycloak,
+            // que al terminar regresa a oidc:PostLogoutRedirectUri
+            HttpContext.GetOwinContext().Authentication.SignOut(
+                OpenIdConnectAuthenticationDefaults.AuthenticationType,
+                CookieAuthenticationDefaults.AuthenticationType);
         }
     }
 }

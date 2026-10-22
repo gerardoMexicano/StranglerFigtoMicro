@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Configuration;
+using System.Threading.Tasks;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Owin;
 using Microsoft.Owin.Host.SystemWeb;
 using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.Cookies;
+using Microsoft.Owin.Security.Notifications;
 using Microsoft.Owin.Security.OpenIdConnect;
 using Owin;
 
@@ -65,8 +67,36 @@ namespace WebApp_MVC
                     NameClaimType = "preferred_username"
                 },
 
+                Notifications = new OpenIdConnectAuthenticationNotifications
+                {
+                    RedirectToIdentityProvider = AgregarIdTokenHintAlLogout
+                },
+
                 CookieManager = new SystemWebCookieManager()
             });
+        }
+
+        // Logout (RP-initiated): Keycloak solo vuelve a post_logout_redirect_uri sin preguntar
+        // "¿seguro que quieres salir?" si sabe de qué sesión se trata. El id_token guardado
+        // en la cookie (SaveTokens) se lo dice; client_id es el respaldo si no lo hay.
+        private static async Task AgregarIdTokenHintAlLogout(
+            RedirectToIdentityProviderNotification<OpenIdConnectMessage, OpenIdConnectAuthenticationOptions> n)
+        {
+            if (n.ProtocolMessage.RequestType != OpenIdConnectRequestType.Logout)
+            {
+                return;
+            }
+
+            n.ProtocolMessage.ClientId = n.Options.ClientId;
+
+            AuthenticateResult sesion = await n.OwinContext.Authentication
+                .AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationType);
+
+            string idToken;
+            if (sesion != null && sesion.Properties.Dictionary.TryGetValue(OpenIdConnectParameterNames.IdToken, out idToken))
+            {
+                n.ProtocolMessage.IdTokenHint = idToken;
+            }
         }
     }
 }
