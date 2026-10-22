@@ -114,3 +114,6 @@ _ReSharper*/
 [Pp]ublish/
 [Cc]ompiled/
 [Pp]re[Cc]ompiledWeb/
+
+# Secretos locales de la app (plantilla versionada: Secrets.config.example)
+Secrets.config
