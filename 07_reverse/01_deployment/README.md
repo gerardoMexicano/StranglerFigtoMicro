@@ -107,6 +107,30 @@ logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_
 - SSO: cada app tiene su cookie; entrar en una deja abierta la sesión de Keycloak y la otra entra sin
   pedir contraseña. Cerrar sesión en cualquiera cierra la de Keycloak.
 
+### Desplegadas detrás del gateway
+
+```
+navegador ─► nginx ─► gateway ─► IIS 192.168.50.243:8081/taxes  (MVC)
+                                 IIS 192.168.50.243:8081/legacy (WebForms)
+```
+
+- Las apps son aplicaciones virtuales de IIS en `/taxes` y `/legacy` (`Deplegar/launch-sites.ps1`) y el
+  gateway no quita el prefijo: `~/`, `Url.Action` y `/signin-oidc` salen bien sin reescribir URLs.
+- `Web.Release.config` cambia `oidc:RedirectUri`, `oidc:PostLogoutRedirectUri`, los enlaces entre apps
+  (`RutaAppMVC` / `RutaAppWebF`) y `proxy:Confiables` a los valores del laboratorio.
+- `proxy:Confiables`: IPs desde las que la app acepta `X-Forwarded-Proto` / `X-Forwarded-Host`
+  (`App_Start/OwinProxy`). Sin esto Katana arma la URL de regreso del login con el host interno de IIS
+  y decide `Secure` en las cookies como si todo fuera http. El gateway (`UseForwardedHeaders`) propaga
+  el esquema y el host que vio nginx.
+- La cookie `OpenIdConnect.nonce` sale con `SameSite=Lax` (`SameSiteLaxCookieManager`): con `None` el
+  navegador la descarta fuera de https y el login falla al volver de Keycloak.
+- En la consola de Keycloak, `legacy-mvc` y `legacy-webforms` deben aceptar las URLs públicas
+  (`${APP_PUBLIC_URL}/taxes/signin-oidc`, `${APP_PUBLIC_URL}/taxes/`, igual con `/legacy`).
+- `Secrets.config` se copia a mano (o desde Jenkins) a la carpeta de cada app en el servidor.
+
+Al pasar a https (TLS en nginx, `APP_SCHEME=https`): cambiar las URLs `http://` del `Web.Release.config`
+y de Keycloak a `https://`, y `oidc:RequireHttpsMetadata` a `true`.
+
 ## Migración de usuarios al primer login
 
 ```
