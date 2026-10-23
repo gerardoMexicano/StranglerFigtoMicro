@@ -112,7 +112,12 @@ logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_
 ```
 navegador ─► nginx ─► gateway ─► IIS 192.168.50.243:8081/taxes  (MVC)
                                  IIS 192.168.50.243:8081/legacy (WebForms)
+                                 backend-api:8080/api           (05_backend, red backend)
 ```
+
+- `/api/*` va al backend .NET 10 (`BACKEND_API_BASE_URL`, por defecto `http://backend-api:8080`) sin
+  quitar el prefijo. El backend se levanta con su propio compose (`05_backend`) en la red `backend`;
+  si no está arriba, el gateway responde 502 en `/api/*` y el resto sigue funcionando.
 
 - Las apps son aplicaciones virtuales de IIS en `/taxes` y `/legacy` (`Deplegar/launch-sites.ps1`) y el
   gateway no quita el prefijo: `~/`, `Url.Action` y `/signin-oidc` salen bien sin reescribir URLs.
