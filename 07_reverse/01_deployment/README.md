@@ -65,6 +65,8 @@ Los valores `${IMPORT_*}` salen del env file.
   Solo vuelven a `<url>/signin-oidc`, con dos URLs por app: la del gateway (`LEGACY_*_URL`: MVC en `/taxes`,
   WebForms en `/legacy`) y la de IIS Express (`LEGACY_*_DEV_URL`). El SSO entre ellas y con `frontend-spa`
   lo da la sesión de Keycloak.
+  `legacy-webforms` también emite access tokens con `aud: backend-api` (mapper `audience-api`): WebForms
+  llama a `05_backend` por `/api` con el token del usuario.
 - Roles de realm: `usuario`, `admin`, `invitado` (los mismos valores que `usuarios.rol` del legacy).
 - `verifyEmail: true` y SMTP tomado de las variables `SMTP_*`.
 - Proveedor de migración `legacy-migration` (ver abajo).
@@ -75,6 +77,10 @@ Keycloak se construye con `keycloak/Dockerfile`: imagen oficial + plugin
 
 Para reimportar después de editar el JSON en development:
 `docker compose --env-file .env.development down -v` (borra la BD de Keycloak).
+
+En un realm que ya existe, el mapper `audience-api` de `legacy-webforms` se agrega sin reimportar:
+`./keycloak/scripts/audiencia-legacy-webforms.sh <ambiente>` (usa el admin `KC_BOOTSTRAP_ADMIN_*`;
+si el mapper ya está, no hace nada).
 
 ## Validar tokens desde una API .NET
 
