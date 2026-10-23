@@ -61,6 +61,10 @@ Los valores `${IMPORT_*}` salen del env file.
 - `frontend-spa`: cliente público, Authorization Code + PKCE (S256), redirect `${APP_PUBLIC_URL}/*`.
 - `backend-api`: resource server; el frontend emite access tokens con `aud: backend-api`.
 - `legacy-cutover`: cuenta de servicio del comando `corte` (permisos mínimos sobre usuarios).
+- `legacy-mvc` / `legacy-webforms`: apps legacy (OWIN), confidenciales, Authorization Code + PKCE (S256).
+  Solo vuelven a `<url>/signin-oidc`, con dos URLs por app: la del gateway (`LEGACY_*_URL`: MVC en `/taxes`,
+  WebForms en `/legacy`) y la de IIS Express (`LEGACY_*_DEV_URL`). El SSO entre ellas y con `frontend-spa`
+  lo da la sesión de Keycloak.
 - Roles de realm: `usuario`, `admin`, `invitado` (los mismos valores que `usuarios.rol` del legacy).
 - `verifyEmail: true` y SMTP tomado de las variables `SMTP_*`.
 - Proveedor de migración `legacy-migration` (ver abajo).
@@ -82,6 +86,50 @@ Los servicios en la red `backend` reciben (ver `x-oidc-env` en el compose):
 
 El discovery interno devuelve el issuer público pero `jwks_uri` interno
 (`KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`), así que la API valida tokens sin salir a internet.
+
+## Apps legacy (MVC / WebForms) con Keycloak
+
+`01_webapp_mvc` y `02_webapp_webforms` (.NET Framework 4.8.1) inician sesión con Keycloak vía
+OWIN (Katana 4.2.2 + IdentityModel 5.7.0): Authorization Code + PKCE, sin formulario de contraseña.
+
+```
+sin sesión ─► Account/Login (MVC) o Login.aspx (WebForms) ─► Keycloak ─► <app>/signin-oidc
+           ─► cookie de la app (.AUTH.MVC / .AUTH.WEBFORMS) ─► [Authorize] / Request.IsAuthenticated
+logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_hint) ─► post_logout_redirect_uri
+```
+
+- Pipeline en `Startup.cs` / `Startup.vb`; `Web.config` con `<authentication mode="None" />`.
+- Configuración en `appSettings` del `Web.config`: `oidc:Authority`, `oidc:ClientId`, `oidc:RedirectUri`,
+  `oidc:PostLogoutRedirectUri`, `oidc:RequireHttpsMetadata` y `auth:SesionMinutos` (sesión local deslizante).
+- El secreto del cliente va en `Secrets.config` junto al `Web.config` (ignorado por git; plantilla
+  `Secrets.config.example`). Es el mismo valor que `LEGACY_MVC_CLIENT_SECRET` / `LEGACY_WEBFORMS_CLIENT_SECRET`.
+- `User.Identity.Name` es el username del legacy (claim `preferred_username`).
+- SSO: cada app tiene su cookie; entrar en una deja abierta la sesión de Keycloak y la otra entra sin
+  pedir contraseña. Cerrar sesión en cualquiera cierra la de Keycloak.
+
+### Desplegadas detrás del gateway
+
+```
+navegador ─► nginx ─► gateway ─► IIS 192.168.50.243:8081/taxes  (MVC)
+                                 IIS 192.168.50.243:8081/legacy (WebForms)
+```
+
+- Las apps son aplicaciones virtuales de IIS en `/taxes` y `/legacy` (`Deplegar/launch-sites.ps1`) y el
+  gateway no quita el prefijo: `~/`, `Url.Action` y `/signin-oidc` salen bien sin reescribir URLs.
+- `Web.Release.config` cambia `oidc:RedirectUri`, `oidc:PostLogoutRedirectUri`, los enlaces entre apps
+  (`RutaAppMVC` / `RutaAppWebF`) y `proxy:Confiables` a los valores del laboratorio.
+- `proxy:Confiables`: IPs desde las que la app acepta `X-Forwarded-Proto` / `X-Forwarded-Host`
+  (`App_Start/OwinProxy`). Sin esto Katana arma la URL de regreso del login con el host interno de IIS
+  y decide `Secure` en las cookies como si todo fuera http. El gateway (`UseForwardedHeaders`) propaga
+  el esquema y el host que vio nginx.
+- La cookie `OpenIdConnect.nonce` sale con `SameSite=Lax` (`SameSiteLaxCookieManager`): con `None` el
+  navegador la descarta fuera de https y el login falla al volver de Keycloak.
+- En la consola de Keycloak, `legacy-mvc` y `legacy-webforms` deben aceptar las URLs públicas
+  (`${APP_PUBLIC_URL}/taxes/signin-oidc`, `${APP_PUBLIC_URL}/taxes/`, igual con `/legacy`).
+- `Secrets.config` se copia a mano (o desde Jenkins) a la carpeta de cada app en el servidor.
+
+Al pasar a https (TLS en nginx, `APP_SCHEME=https`): cambiar las URLs `http://` del `Web.Release.config`
+y de Keycloak a `https://`, y `oidc:RequireHttpsMetadata` a `true`.
 
 ## Migración de usuarios al primer login
 

@@ -20,15 +20,12 @@ obj/
 
 # Archivos de WebForms específicos
 *.aspx.cs?  # .aspx.vb (archivos code-behind compilados)
-*.designer.vb
-*.resx
 *.resources
 
 # Archivos de paquetes NuGet
 packages/
 *.nupkg
 *.nuspec
-packages.config
 
 # Archivos temporales de IIS Express
 .vs/config/
@@ -115,3 +112,6 @@ _ReSharper*/
 [Pp]ublish/
 [Cc]ompiled/
 [Pp]re[Cc]ompiledWeb/
+
+# Secretos locales de la app (plantilla versionada: Secrets.config.example)
+Secrets.config
