@@ -2,6 +2,7 @@ Imports System.Threading.Tasks
 Imports Microsoft.IdentityModel.Protocols.OpenIdConnect
 Imports Microsoft.IdentityModel.Tokens
 Imports Microsoft.Owin
+Imports Microsoft.Owin.Extensions
 Imports Microsoft.Owin.Host.SystemWeb
 Imports Microsoft.Owin.Security
 Imports Microsoft.Owin.Security.Cookies
@@ -58,6 +59,11 @@ Public Class Startup
             },
             .CookieManager = New SameSiteLaxCookieManager()
         })
+
+        ' Todo lo anterior corre en la etapa AuthenticateRequest de IIS (por defecto Katana corre al
+        ' final, en PreHandlerExecute). Así, cuando <authorization> del Web.config revisa permisos,
+        ' User ya está lleno; y si niega el acceso (401), OIDC lo convierte en el redirect a Keycloak.
+        app.UseStageMarker(PipelineStage.Authenticate)
     End Sub
 
     ' Logout: id_token_hint para que Keycloak vuelva a post_logout_redirect_uri sin pedir confirmación
