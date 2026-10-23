@@ -17,6 +17,9 @@ Imports Owin
 Public Class Startup
 
     Public Sub Configuration(app As IAppBuilder)
+        ' Primero: que el resto del pipeline vea el esquema y host públicos (ver App_Start/OwinProxy.vb)
+        app.UsarEncabezadosDelProxy(ConfigurationManager.AppSettings("proxy:Confiables"))
+
         ' Cuando OIDC termina de validar al usuario, se lo entrega a este middleware de cookies
         app.SetDefaultSignInAsAuthenticationType(CookieAuthenticationDefaults.AuthenticationType)
 
@@ -28,7 +31,7 @@ Public Class Startup
             .SlidingExpiration = True,
             .CookieHttpOnly = True,
             .CookieSecure = CookieSecureOption.SameAsRequest,
-            .CookieManager = New SystemWebCookieManager()
+            .CookieManager = New SystemWebChunkingCookieManager()
         })
 
         ' "No hay cookie: ¿cómo averiguo quién eres?": Authorization Code + PKCE contra Keycloak
@@ -52,7 +55,7 @@ Public Class Startup
             .Notifications = New OpenIdConnectAuthenticationNotifications With {
                 .RedirectToIdentityProvider = AddressOf AgregarIdTokenHintAlLogout
             },
-            .CookieManager = New SystemWebCookieManager()
+            .CookieManager = New SameSiteLaxCookieManager()
         })
     End Sub
 

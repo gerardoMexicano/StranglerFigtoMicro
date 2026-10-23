@@ -21,6 +21,9 @@ namespace WebApp_MVC
     {
         public void Configuration(IAppBuilder app)
         {
+            // Primero: que el resto del pipeline vea el esquema y host públicos (ver OwinProxy.cs)
+            app.UsarEncabezadosDelProxy(ConfigurationManager.AppSettings["proxy:Confiables"]);
+
             // Cuando OIDC termina de validar al usuario, se lo entrega a este middleware de cookies
             app.SetDefaultSignInAsAuthenticationType(CookieAuthenticationDefaults.AuthenticationType);
 
@@ -36,7 +39,8 @@ namespace WebApp_MVC
                 CookieHttpOnly = true,
                 CookieSecure = CookieSecureOption.SameAsRequest,
                 // Evita que System.Web y OWIN se pisen las cookies de la respuesta (bug conocido de Katana)
-                CookieManager = new SystemWebCookieManager()
+                // y parte la cookie en trozos de ~4 KB: con claims + id_token pasa del límite del navegador
+                CookieManager = new SystemWebChunkingCookieManager()
             });
 
             // "No hay cookie: ¿cómo averiguo quién eres?": Authorization Code + PKCE contra Keycloak
@@ -72,7 +76,8 @@ namespace WebApp_MVC
                     RedirectToIdentityProvider = AgregarIdTokenHintAlLogout
                 },
 
-                CookieManager = new SystemWebCookieManager()
+                // Cookie del nonce con SameSite=Lax para que sobreviva sin https (ver OwinProxy.cs)
+                CookieManager = new SameSiteLaxCookieManager()
             });
         }
 
