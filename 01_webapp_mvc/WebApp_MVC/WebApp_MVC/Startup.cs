@@ -73,7 +73,8 @@ namespace WebApp_MVC
 
                 Notifications = new OpenIdConnectAuthenticationNotifications
                 {
-                    RedirectToIdentityProvider = AgregarIdTokenHintAlLogout
+                    RedirectToIdentityProvider = AgregarIdTokenHintAlLogout,
+                    AuthenticationFailed = ReintentarSiFaltaElNonce
                 },
 
                 // Cookie del nonce con SameSite=Lax para que sobreviva sin https (ver OwinProxy.cs)
@@ -102,6 +103,44 @@ namespace WebApp_MVC
             {
                 n.ProtocolMessage.IdTokenHint = idToken;
             }
+        }
+
+        private const string CookieReintento = "OpenIdConnect.reintento";
+
+        // Una respuesta de Keycloak que llega sin su cookie de nonce (el enlace de verificación de
+        // email abierto en otra pestaña o navegador, el mismo callback dos veces) se rechaza a propósito.
+        // En vez de un 500 se vuelve a empezar el login: nace un nonce nuevo en este navegador y, como
+        // la sesión de Keycloak ya existe, el usuario entra sin ver nada.
+        // Solo para errores de nonce y una sola vez: si vuelve a fallar en 2 minutos (p. ej. el nonce
+        // se pierde siempre porque se entra por localhost y Keycloak regresa a la IP) se deja ver el
+        // error en lugar de rebotar entre la app y Keycloak para siempre.
+        private static Task ReintentarSiFaltaElNonce(
+            AuthenticationFailedNotification<OpenIdConnectMessage, OpenIdConnectAuthenticationOptions> n)
+        {
+            if (!(n.Exception is OpenIdConnectProtocolInvalidNonceException))
+            {
+                return Task.FromResult(0);
+            }
+
+            var cookies = new SystemWebCookieManager();
+            string ruta = n.Request.PathBase.HasValue ? n.Request.PathBase.Value : "/";
+
+            if (cookies.GetRequestCookie(n.OwinContext, CookieReintento) != null)
+            {
+                cookies.DeleteCookie(n.OwinContext, CookieReintento, new CookieOptions { Path = ruta });
+                return Task.FromResult(0);
+            }
+
+            cookies.AppendResponseCookie(n.OwinContext, CookieReintento, "1", new CookieOptions
+            {
+                Path = ruta,
+                HttpOnly = true,
+                Expires = DateTime.UtcNow.AddMinutes(2)
+            });
+
+            n.HandleResponse();
+            n.Response.Redirect(n.Request.PathBase + "/Account/Login");
+            return Task.FromResult(0);
         }
     }
 }

@@ -53,7 +53,8 @@ Public Class Startup
                 .NameClaimType = "preferred_username"
             },
             .Notifications = New OpenIdConnectAuthenticationNotifications With {
-                .RedirectToIdentityProvider = AddressOf AgregarIdTokenHintAlLogout
+                .RedirectToIdentityProvider = AddressOf AgregarIdTokenHintAlLogout,
+                .AuthenticationFailed = AddressOf ReintentarSiFaltaElNonce
             },
             .CookieManager = New SameSiteLaxCookieManager()
         })
@@ -74,6 +75,36 @@ Public Class Startup
         If sesion IsNot Nothing AndAlso sesion.Properties.Dictionary.TryGetValue(OpenIdConnectParameterNames.IdToken, idToken) Then
             n.ProtocolMessage.IdTokenHint = idToken
         End If
+    End Function
+
+    Private Const CookieReintento As String = "OpenIdConnect.reintento"
+
+    ' Respuesta de Keycloak sin su cookie de nonce (enlace de verificación de email en otra pestaña o
+    ' navegador, el mismo callback dos veces): en vez de un 500 se vuelve a empezar el login, una sola
+    ' vez cada 2 minutos para no rebotar con Keycloak si el nonce se pierde siempre (ver Startup.cs de MVC).
+    Private Shared Function ReintentarSiFaltaElNonce(
+            n As AuthenticationFailedNotification(Of OpenIdConnectMessage, OpenIdConnectAuthenticationOptions)) As Task
+        If Not TypeOf n.Exception Is OpenIdConnectProtocolInvalidNonceException Then
+            Return Task.FromResult(0)
+        End If
+
+        Dim cookies As New SystemWebCookieManager()
+        Dim ruta As String = If(n.Request.PathBase.HasValue, n.Request.PathBase.Value, "/")
+
+        If cookies.GetRequestCookie(n.OwinContext, CookieReintento) IsNot Nothing Then
+            cookies.DeleteCookie(n.OwinContext, CookieReintento, New CookieOptions With {.Path = ruta})
+            Return Task.FromResult(0)
+        End If
+
+        cookies.AppendResponseCookie(n.OwinContext, CookieReintento, "1", New CookieOptions With {
+            .Path = ruta,
+            .HttpOnly = True,
+            .Expires = DateTime.UtcNow.AddMinutes(2)
+        })
+
+        n.HandleResponse()
+        n.Response.Redirect(n.Request.PathBase.Value & "/Login")
+        Return Task.FromResult(0)
     End Function
 
 End Class
