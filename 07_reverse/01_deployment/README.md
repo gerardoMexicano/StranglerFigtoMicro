@@ -104,6 +104,11 @@ logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_
 - El secreto del cliente va en `Secrets.config` junto al `Web.config` (ignorado por git; plantilla
   `Secrets.config.example`). Es el mismo valor que `LEGACY_MVC_CLIENT_SECRET` / `LEGACY_WEBFORMS_CLIENT_SECRET`.
 - `User.Identity.Name` es el username del legacy (claim `preferred_username`).
+- La sesión (claims + access, refresh e id token de Keycloak) vive en la memoria de IIS
+  (`App_Start/SesionEnServidor`); la cookie solo lleva su llave cifrada. Con los tokens dentro ocupaba
+  varios KB por app y, con las de MVC y WebForms juntas, el encabezado Cookie puede rebasar el límite de
+  nginx (8 KB por línea: 400 "Request Header Or Cookie Too Large"). Si IIS recicla el app pool la sesión
+  se pierde y el usuario vuelve a entrar por Keycloak sin contraseña.
 - SSO: cada app tiene su cookie; entrar en una deja abierta la sesión de Keycloak y la otra entra sin
   pedir contraseña. Cerrar sesión en cualquiera cierra la de Keycloak.
 
