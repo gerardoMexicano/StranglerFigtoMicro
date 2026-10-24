@@ -142,6 +142,41 @@ navegador ─► nginx ─► gateway ─► IIS 192.168.50.243:8081/taxes  (MVC
 Al pasar a https (TLS en nginx, `APP_SCHEME=https`): cambiar las URLs `http://` del `Web.Release.config`
 y de Keycloak a `https://`, y `oidc:RequireHttpsMetadata` a `true`.
 
+### WebForms contra el backend nuevo (`LEgFrontNEWBACK.aspx`)
+
+```
+navegador ─► nginx ─► gateway ─► IIS /legacy/LEgFrontNEWBACK.aspx
+                                   │  code-behind, Bearer <token del usuario>
+                                   ▼
+             nginx ─► gateway ─► backend-api:8080/api/sales/*  ─► WideWorldImporters
+```
+
+- La página llama al backend desde el servidor (`Backend/BackendApi.vb`): el token no llega al
+  navegador. El access token sale de la cookie de sesión (`SaveTokens`); si vence se renueva con el
+  refresh token (`Backend/TokenDeAcceso.vb`). Si Keycloak ya no lo renueva, la página cierra la sesión
+  local y se recarga para volver a pasar por Keycloak.
+- `Web.config`:
+  - `backend:BaseUrl` — `http://192.168.50.10/api/` (por nginx + gateway, igual que el login).
+  - `backend:TimeoutSegundos` — `300`.
+  - `backend:LEgFrontNEWBACK` — `api` (backend nuevo) o `sql` (consulta directa como antes, para
+    regresar sin desplegar).
+- Requisitos: el mapper `audience-api` en `legacy-webforms` (ver *Realm importado*) y el contenedor de
+  `05_backend` arriba en la red `backend`, con `WWI_DB_CONNECTION` en el `.env.<ambiente>`.
+- Con `api` el grid pagina en el servidor: cada página es una llamada de 50 filas. El backend ordena por
+  fecha descendente; la consulta directa no tenía orden, así que las filas pueden salir en otro orden
+  pero el total es el mismo.
+
+Verificación:
+
+```bash
+# Sin token: 401 del backend (WWW-Authenticate: Bearer). 404 = el gateway no tiene la ruta /api
+curl -i http://192.168.50.10/api/sales/orders
+```
+
+En el navegador, `http://192.168.50.10/legacy/LEgFrontNEWBACK.aspx`: arriba dice el origen de datos
+activo; *Cargar Registros* llena las 5 tablas. Con el rango por defecto (2013-01-01 a 2016-12-31) el
+paginador debe dar los mismos totales con `api` y con `sql`.
+
 ## Migración de usuarios al primer login
 
 ```
