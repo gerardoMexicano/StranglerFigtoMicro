@@ -27,6 +27,8 @@ namespace WebApp_MVC
             // Cuando OIDC termina de validar al usuario, se lo entrega a este middleware de cookies
             app.SetDefaultSignInAsAuthenticationType(CookieAuthenticationDefaults.AuthenticationType);
 
+            TimeSpan duracionSesion = TimeSpan.FromMinutes(int.Parse(ConfigurationManager.AppSettings["auth:SesionMinutos"]));
+
             // "¿Quién eres en ESTA app?": la sesión local, como antes .AUTH
             app.UseCookieAuthentication(new CookieAuthenticationOptions
             {
@@ -34,13 +36,15 @@ namespace WebApp_MVC
                 // Nombre propio: MVC y WebForms comparten host (localhost, y el dominio del gateway);
                 // cada app tiene su sesión y el SSO entre ellas lo da la sesión de Keycloak
                 CookieName = ".AUTH.MVC",
-                ExpireTimeSpan = TimeSpan.FromMinutes(int.Parse(ConfigurationManager.AppSettings["auth:SesionMinutos"])),
+                ExpireTimeSpan = duracionSesion,
                 SlidingExpiration = true,
                 CookieHttpOnly = true,
                 CookieSecure = CookieSecureOption.SameAsRequest,
                 // Evita que System.Web y OWIN se pisen las cookies de la respuesta (bug conocido de Katana)
-                // y parte la cookie en trozos de ~4 KB: con claims + id_token pasa del límite del navegador
-                CookieManager = new SystemWebChunkingCookieManager()
+                // y parte la cookie en trozos de ~4 KB si llegara a crecer
+                CookieManager = new SystemWebChunkingCookieManager(),
+                // Claims y tokens se quedan en IIS; la cookie solo lleva la llave (ver SesionEnServidor.cs)
+                SessionStore = new SesionEnServidor(duracionSesion)
             });
 
             // "No hay cookie: ¿cómo averiguo quién eres?": Authorization Code + PKCE contra Keycloak

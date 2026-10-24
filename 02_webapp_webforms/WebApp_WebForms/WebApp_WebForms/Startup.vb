@@ -24,15 +24,19 @@ Public Class Startup
         ' Cuando OIDC termina de validar al usuario, se lo entrega a este middleware de cookies
         app.SetDefaultSignInAsAuthenticationType(CookieAuthenticationDefaults.AuthenticationType)
 
+        Dim duracionSesion As TimeSpan = TimeSpan.FromMinutes(Integer.Parse(ConfigurationManager.AppSettings("auth:SesionMinutos")))
+
         ' "¿Quién eres en ESTA app?": la sesión local, como antes .AUTH
+        ' Claims y tokens se quedan en IIS; la cookie solo lleva la llave (ver App_Start/SesionEnServidor.vb)
         app.UseCookieAuthentication(New CookieAuthenticationOptions With {
             .AuthenticationType = CookieAuthenticationDefaults.AuthenticationType,
             .CookieName = ".AUTH.WEBFORMS",
-            .ExpireTimeSpan = TimeSpan.FromMinutes(Integer.Parse(ConfigurationManager.AppSettings("auth:SesionMinutos"))),
+            .ExpireTimeSpan = duracionSesion,
             .SlidingExpiration = True,
             .CookieHttpOnly = True,
             .CookieSecure = CookieSecureOption.SameAsRequest,
-            .CookieManager = New SystemWebChunkingCookieManager()
+            .CookieManager = New SystemWebChunkingCookieManager(),
+            .SessionStore = New SesionEnServidor(duracionSesion)
         })
 
         ' "No hay cookie: ¿cómo averiguo quién eres?": Authorization Code + PKCE contra Keycloak
