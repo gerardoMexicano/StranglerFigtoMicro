@@ -157,9 +157,9 @@ navegador ─► nginx ─► gateway ─► IIS /legacy/LEgFrontNEWBACK.aspx
 ```
 
 - La página llama al backend desde el servidor (`Backend/BackendApi.vb`): el token no llega al
-  navegador. El access token sale de la cookie de sesión (`SaveTokens`); si vence se renueva con el
-  refresh token (`Backend/TokenDeAcceso.vb`). Si Keycloak ya no lo renueva, la página cierra la sesión
-  local y se recarga para volver a pasar por Keycloak.
+  navegador. El access token sale de la sesión en IIS (`SaveTokens` + `SesionEnServidor`); si vence
+  se renueva con el refresh token (`Backend/TokenDeAcceso.vb`). Si Keycloak ya no lo renueva, la página
+  cierra la sesión local y se recarga para volver a pasar por Keycloak.
 - `Web.config`:
   - `backend:BaseUrl` — `http://192.168.50.10/api/` (por nginx + gateway, igual que el login).
   - `backend:TimeoutSegundos` — `300`.

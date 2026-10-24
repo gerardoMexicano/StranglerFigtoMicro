@@ -8,8 +8,9 @@ Imports Microsoft.Owin.Security.Cookies
 Imports Newtonsoft.Json.Linq
 
 ' Access token del usuario para llamar a 05_backend.
-' Startup guarda los tokens de Keycloak en la cookie de sesión (SaveTokens). El access token dura
-' minutos y la cookie una hora: cuando vence se renueva con el refresh token y se reemite la cookie.
+' Startup guarda los tokens de Keycloak en la sesión (SaveTokens), que vive en IIS (SesionEnServidor).
+' El access token dura minutos y la sesión una hora: cuando vence se renueva con el refresh token y se
+' guarda una sesión nueva.
 ' Nothing = ya no hay forma de renovarlo (sesión de Keycloak cerrada o vencida) y hay que volver a
 ' hacer login.
 Public Module TokenDeAcceso
@@ -54,7 +55,8 @@ Public Module TokenDeAcceso
 
         Guardar(tokens, nuevos)
 
-        ' Misma identidad, tokens nuevos: el middleware de cookies reescribe .AUTH.WEBFORMS al responder
+        ' Misma identidad, tokens nuevos: el middleware de cookies guarda el ticket en SesionEnServidor y
+        ' reemite .AUTH.WEBFORMS con la llave nueva al responder
         sesion.Properties.IssuedUtc = Nothing
         sesion.Properties.ExpiresUtc = Nothing
         contexto.Authentication.SignIn(sesion.Properties, sesion.Identity)
