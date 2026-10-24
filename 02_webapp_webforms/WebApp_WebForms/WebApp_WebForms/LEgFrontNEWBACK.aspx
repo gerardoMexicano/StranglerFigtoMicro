@@ -1,5 +1,5 @@
 <%@ Page Language="vb" AutoEventWireup="false" CodeBehind="LEgFrontNEWBACK.aspx.vb"
-    Inherits="WebApp_WebForms.LEgFrontNEWBACK" %>
+    Inherits="WebApp_WebForms.LEgFrontNEWBACK" Async="true" %>
 
     <!DOCTYPE html>
     <html xmlns="http://www.w3.org/1999/xhtml">
@@ -186,6 +186,7 @@
                 <h1>Frontend Antiguo Backend Nuevo</h1>
                 <p>Página que demuestra la migración progresiva, cargando tablas gigantes de forma síncrona y sin
                     optimizar para evidenciar la lentitud del proceso antiguo.</p>
+                <p class="origen">Origen de datos: <strong><asp:Label ID="lblOrigen" runat="server" /></strong></p>
                 <a href="Menu.aspx" class="btn-back">⬅ Volver al Menú Principal</a>
 
                 <div class="filter-section">
