@@ -1,11 +1,14 @@
 import { BehaviorSubject, Observable, of } from 'rxjs';
 
-import { AuthService } from '../auth.service';
+import { AuthService, AuthUser } from '../auth.service';
 
 /** AuthService para pruebas: sesión controlada a mano y registro de llamadas. */
 export class FakeAuthService extends AuthService {
   readonly session = new BehaviorSubject<boolean>(false);
   readonly isAuthenticated$ = this.session.asObservable();
+
+  readonly user = new BehaviorSubject<AuthUser | null>(null);
+  readonly user$ = this.user.asObservable();
 
   token: string | null = null;
   /** Token que deja refreshSession() cuando Keycloak sí renueva. */

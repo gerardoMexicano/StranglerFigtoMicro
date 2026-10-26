@@ -1,0 +1,22 @@
+<main class="presentacion">
+  <p class="etiqueta">Laboratorio de migración</p>
+  <h1>Del monolito a los microservicios, sin apagar nada</h1>
+  <p class="resumen">
+    Las aplicaciones de siempre siguen en su lugar mientras las piezas nuevas las van rodeando: un
+    solo inicio de sesión con Keycloak y un menú que te lleva a cada una.
+  </p>
+
+  <ul class="piezas" aria-label="Qué hay detrás">
+    <li><strong>BrokenTaxes</strong> MVC · .NET Framework</li>
+    <li><strong>Legacy</strong> WebForms · .NET Framework</li>
+    <li><strong>Backend nuevo</strong> .NET 10 · Clean Architecture</li>
+    <li><strong>Esta app</strong> Angular 22</li>
+  </ul>
+
+  @if (conSesion()) {
+    <a class="boton" routerLink="/menu">Ir al menú</a>
+  } @else {
+    <button type="button" class="boton" (click)="entrar()">Entrar</button>
+    <p class="nota">Te llevamos al inicio de sesión de Keycloak y regresas al menú.</p>
+  }
+</main>

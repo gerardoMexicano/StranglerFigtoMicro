@@ -23,6 +23,7 @@ describe('OidcAuthService', () => {
     logoff: ReturnType<typeof vi.fn>;
     getAccessToken: ReturnType<typeof vi.fn>;
     forceRefreshSession: ReturnType<typeof vi.fn>;
+    getPayloadFromAccessToken: ReturnType<typeof vi.fn>;
   };
   let location: { replaceState: ReturnType<typeof vi.fn> };
   let service: OidcAuthService;
@@ -42,6 +43,7 @@ describe('OidcAuthService', () => {
       logoff: vi.fn().mockReturnValue(of(null)),
       getAccessToken: vi.fn().mockReturnValue(of('')),
       forceRefreshSession: vi.fn().mockReturnValue(of(respuesta(true))),
+      getPayloadFromAccessToken: vi.fn().mockReturnValue(of(null)),
     };
     location = { replaceState: vi.fn() };
 
@@ -59,6 +61,49 @@ describe('OidcAuthService', () => {
     oidc.isAuthenticated$.next({ isAuthenticated: true, allConfigsAuthenticated: [] });
 
     expect(await firstValueFrom(service.isAuthenticated$)).toBe(true);
+  });
+
+  describe('user$', () => {
+    function conSesion(payload: unknown) {
+      oidc.getPayloadFromAccessToken.mockReturnValue(of(payload));
+      oidc.isAuthenticated$.next({ isAuthenticated: true, allConfigsAuthenticated: [] });
+    }
+
+    it('sin sesión es null', async () => {
+      expect(await firstValueFrom(service.user$)).toBeNull();
+    });
+
+    it('con sesión sale del access token: usuario, nombre y roles de realm', async () => {
+      conSesion({
+        sub: 'f3a1',
+        preferred_username: 'juan',
+        name: 'Juan Pérez',
+        realm_access: { roles: ['usuario', 'default-roles-laboratorio'] },
+      });
+
+      expect(await firstValueFrom(service.user$)).toEqual({
+        userName: 'juan',
+        name: 'Juan Pérez',
+        roles: ['usuario', 'default-roles-laboratorio'],
+      });
+    });
+
+    it('sin nombre ni roles en el token usa el usuario y una lista vacía', async () => {
+      conSesion({ sub: 'f3a1', preferred_username: 'juan' });
+
+      expect(await firstValueFrom(service.user$)).toEqual({
+        userName: 'juan',
+        name: 'juan',
+        roles: [],
+      });
+    });
+
+    it('al cerrar la sesión vuelve a null', async () => {
+      conSesion({ preferred_username: 'juan' });
+      oidc.isAuthenticated$.next({ isAuthenticated: false, allConfigsAuthenticated: [] });
+
+      expect(await firstValueFrom(service.user$)).toBeNull();
+    });
   });
 
   it('login guarda la ruta de regreso y manda a Keycloak', () => {

@@ -1,8 +1,22 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 
-// Pendiente (paso 3): presentación con el botón Entrar
+import { AuthService } from '../../core/auth/auth.service';
+
+/** Presentación pública de /newapp: única puerta de entrada al login de Keycloak. */
 @Component({
   selector: 'app-inicio',
-  template: '<h1>Laboratorio</h1>',
+  imports: [RouterLink],
+  templateUrl: './inicio.html',
+  styleUrl: './inicio.css',
 })
-export class Inicio {}
+export class Inicio {
+  private readonly auth = inject(AuthService);
+
+  protected readonly conSesion = toSignal(this.auth.isAuthenticated$, { initialValue: false });
+
+  protected entrar(): void {
+    this.auth.login('/menu');
+  }
+}

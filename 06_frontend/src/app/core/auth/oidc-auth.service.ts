@@ -1,9 +1,9 @@
 import { Location } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
-import { catchError, firstValueFrom, map, Observable, of } from 'rxjs';
+import { catchError, firstValueFrom, map, Observable, of, switchMap } from 'rxjs';
 
-import { AuthService } from './auth.service';
+import { AuthService, AuthUser } from './auth.service';
 
 /** Ruta a la que vuelve el usuario después de Keycloak. No es secreta: va en sessionStorage. */
 export const RETURN_URL_KEY = 'newapp.returnUrl';
@@ -17,6 +17,12 @@ export class OidcAuthService extends AuthService {
   private readonly location = inject(Location);
 
   readonly isAuthenticated$ = this.oidc.isAuthenticated$.pipe(map((r) => r.isAuthenticated));
+
+  readonly user$: Observable<AuthUser | null> = this.isAuthenticated$.pipe(
+    switchMap((conSesion) =>
+      conSesion ? this.oidc.getPayloadFromAccessToken().pipe(map(usuarioDelToken)) : of(null),
+    ),
+  );
 
   /**
    * Se corre al arrancar, antes de la primera navegación. Procesa el regreso de Keycloak
@@ -55,6 +61,26 @@ export class OidcAuthService extends AuthService {
       catchError(() => of(false)),
     );
   }
+}
+
+/** Claims del access token de Keycloak (scope profile + roles de realm). */
+function usuarioDelToken(
+  payload: {
+    sub?: string;
+    preferred_username?: string;
+    name?: string;
+    realm_access?: { roles?: string[] };
+  } | null,
+): AuthUser | null {
+  if (!payload) {
+    return null;
+  }
+  const userName = payload.preferred_username ?? payload.sub ?? '';
+  return {
+    userName,
+    name: payload.name ?? userName,
+    roles: payload.realm_access?.roles ?? [],
+  };
 }
 
 /** Solo rutas de /newapp: nada de "//otro-host" ni esquemas como https: o javascript:. */

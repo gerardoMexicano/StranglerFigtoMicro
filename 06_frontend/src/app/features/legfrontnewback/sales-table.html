@@ -1,0 +1,63 @@
+<section class="tabla" [attr.aria-busy]="datos.isLoading()">
+  <header class="titulo">
+    <h2>{{ title() }}</h2>
+    <span class="estado" role="status">
+      @if (!rango()) {
+        Sin cargar
+      } @else if (datos.isLoading()) {
+        Cargando…
+      } @else if (error(); as mensaje) {
+        <span class="error">{{ mensaje }}</span>
+      } @else if (resultado(); as r) {
+        {{ r.pagina.totalCount | number }} registros · {{ r.ms }} ms
+      }
+    </span>
+  </header>
+
+  @if (resultado(); as r) {
+    @if (r.pagina.items.length === 0) {
+      <p class="vacia">Sin registros en el rango.</p>
+    } @else {
+      <div class="desplazable" tabindex="0" [attr.aria-label]="title()">
+        <table>
+          <thead>
+            <tr>
+              @for (columna of columnas(); track columna) {
+                <th scope="col">{{ columna }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of r.pagina.items; track $index) {
+              <tr>
+                @for (columna of columnas(); track columna) {
+                  <td>{{ celda(fila[columna]) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="paginador" [attr.aria-label]="'Páginas de ' + title()">
+        <button
+          type="button"
+          class="boton boton-secundario"
+          [disabled]="!r.pagina.hasPreviousPage"
+          (click)="anterior()"
+        >
+          Anterior
+        </button>
+        <span>Página {{ r.pagina.page | number }} de {{ r.pagina.totalPages | number }}</span>
+        <button
+          type="button"
+          class="boton boton-secundario"
+          [disabled]="!r.pagina.hasNextPage"
+          (click)="siguiente()"
+        >
+          Siguiente
+        </button>
+      </nav>
+    }
+  }
+</section>

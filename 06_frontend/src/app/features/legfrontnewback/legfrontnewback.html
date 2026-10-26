@@ -1,0 +1,29 @@
+<main class="pagina">
+  <a class="boton boton-texto" routerLink="/menu">← Volver al menú</a>
+
+  <h1>Frontend Nuevo Backend Nuevo</h1>
+  <p class="resumen">
+    La misma consulta que LEgFrontNEWBACK.aspx, ahora en Angular: las cinco tablas se piden en
+    paralelo y cada una pagina en el servidor.
+  </p>
+  <p class="origen">Origen de datos: <strong>backend .NET 10 (/api/sales)</strong></p>
+
+  <form class="filtros" (ngSubmit)="cargar()">
+    <label>
+      Fecha inicio
+      <input type="date" name="inicio" required [(ngModel)]="inicio" />
+    </label>
+    <label>
+      Fecha final
+      <input type="date" name="fin" required [(ngModel)]="fin" />
+    </label>
+    <button type="submit" class="boton" [disabled]="rangoInvalido()">Cargar registros</button>
+    @if (rangoInvalido()) {
+      <p class="error" role="alert">La fecha inicial debe ser anterior o igual a la final.</p>
+    }
+  </form>
+
+  @for (tabla of tablas; track tabla.resource) {
+    <app-sales-table [resource]="tabla.resource" [title]="tabla.title" [rango]="rango()" />
+  }
+</main>

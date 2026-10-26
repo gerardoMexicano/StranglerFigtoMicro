@@ -1,0 +1,56 @@
+.presentacion {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 12vh 1rem 4rem;
+}
+
+.etiqueta {
+  margin: 0;
+  color: var(--color-acento);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+}
+
+h1 {
+  margin: 0.5rem 0 1rem;
+  color: var(--color-primario);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  line-height: 1.15;
+}
+
+.resumen {
+  margin: 0 0 2rem;
+  color: var(--color-texto-suave);
+  font-size: 1.1rem;
+}
+
+.piezas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 2.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.piezas li {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+}
+
+.piezas strong {
+  display: block;
+  color: var(--color-texto);
+}
+
+.nota {
+  margin-top: 0.75rem;
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+}
