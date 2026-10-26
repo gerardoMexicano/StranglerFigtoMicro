@@ -123,6 +123,11 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development down
 | `GET` | `/api/sales/orders` | `Bearer <JWT Keycloak>` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Orders`. |
 | `GET` | `/openapi/v1.json` | Anónimo *(Solo `Development`)* | Especificación OpenAPI 3 nativa de .NET 10. |
 
+Desde fuera de Docker los endpoints `/api/*` se alcanzan por nginx + gateway (`http://<host>/api/...`, ruta
+`backend-api-route` de `07_reverse/01_deployment/Gateway`). El primer consumidor es
+`02_webapp_webforms/.../LEgFrontNEWBACK.aspx`, que llama desde el servidor con el token del usuario
+(cliente `legacy-webforms`, que emite `aud: backend-api`).
+
 ---
 
 ## 6. Buena Práctica Futura: Comunicación con Otros Microservicios (Token Exchange RFC 8693)

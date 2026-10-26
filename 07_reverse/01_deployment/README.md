@@ -65,6 +65,8 @@ Los valores `${IMPORT_*}` salen del env file.
   Solo vuelven a `<url>/signin-oidc`, con dos URLs por app: la del gateway (`LEGACY_*_URL`: MVC en `/taxes`,
   WebForms en `/legacy`) y la de IIS Express (`LEGACY_*_DEV_URL`). El SSO entre ellas y con `frontend-spa`
   lo da la sesión de Keycloak.
+  `legacy-webforms` también emite access tokens con `aud: backend-api` (mapper `audience-api`): WebForms
+  llama a `05_backend` por `/api` con el token del usuario.
 - Roles de realm: `usuario`, `admin`, `invitado` (los mismos valores que `usuarios.rol` del legacy).
 - `verifyEmail: true` y SMTP tomado de las variables `SMTP_*`.
 - Proveedor de migración `legacy-migration` (ver abajo).
@@ -75,6 +77,10 @@ Keycloak se construye con `keycloak/Dockerfile`: imagen oficial + plugin
 
 Para reimportar después de editar el JSON en development:
 `docker compose --env-file .env.development down -v` (borra la BD de Keycloak).
+
+En un realm que ya existe, el mapper `audience-api` de `legacy-webforms` se agrega sin reimportar:
+`./keycloak/scripts/audiencia-legacy-webforms.sh <ambiente>` (usa el admin `KC_BOOTSTRAP_ADMIN_*`;
+si el mapper ya está, no hace nada).
 
 ## Validar tokens desde una API .NET
 
@@ -104,6 +110,11 @@ logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_
 - El secreto del cliente va en `Secrets.config` junto al `Web.config` (ignorado por git; plantilla
   `Secrets.config.example`). Es el mismo valor que `LEGACY_MVC_CLIENT_SECRET` / `LEGACY_WEBFORMS_CLIENT_SECRET`.
 - `User.Identity.Name` es el username del legacy (claim `preferred_username`).
+- La sesión (claims + access, refresh e id token de Keycloak) vive en la memoria de IIS
+  (`App_Start/SesionEnServidor`); la cookie solo lleva su llave cifrada. Con los tokens dentro ocupaba
+  varios KB por app y, con las de MVC y WebForms juntas, el encabezado Cookie puede rebasar el límite de
+  nginx (8 KB por línea: 400 "Request Header Or Cookie Too Large"). Si IIS recicla el app pool la sesión
+  se pierde y el usuario vuelve a entrar por Keycloak sin contraseña.
 - SSO: cada app tiene su cookie; entrar en una deja abierta la sesión de Keycloak y la otra entra sin
   pedir contraseña. Cerrar sesión en cualquiera cierra la de Keycloak.
 
@@ -112,7 +123,12 @@ logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_
 ```
 navegador ─► nginx ─► gateway ─► IIS 192.168.50.243:8081/taxes  (MVC)
                                  IIS 192.168.50.243:8081/legacy (WebForms)
+                                 backend-api:8080/api           (05_backend, red backend)
 ```
+
+- `/api/*` va al backend .NET 10 (`BACKEND_API_BASE_URL`, por defecto `http://backend-api:8080`) sin
+  quitar el prefijo. El backend se levanta con su propio compose (`05_backend`) en la red `backend`;
+  si no está arriba, el gateway responde 502 en `/api/*` y el resto sigue funcionando.
 
 - Las apps son aplicaciones virtuales de IIS en `/taxes` y `/legacy` (`Deplegar/launch-sites.ps1`) y el
   gateway no quita el prefijo: `~/`, `Url.Action` y `/signin-oidc` salen bien sin reescribir URLs.
@@ -130,6 +146,41 @@ navegador ─► nginx ─► gateway ─► IIS 192.168.50.243:8081/taxes  (MVC
 
 Al pasar a https (TLS en nginx, `APP_SCHEME=https`): cambiar las URLs `http://` del `Web.Release.config`
 y de Keycloak a `https://`, y `oidc:RequireHttpsMetadata` a `true`.
+
+### WebForms contra el backend nuevo (`LEgFrontNEWBACK.aspx`)
+
+```
+navegador ─► nginx ─► gateway ─► IIS /legacy/LEgFrontNEWBACK.aspx
+                                   │  code-behind, Bearer <token del usuario>
+                                   ▼
+             nginx ─► gateway ─► backend-api:8080/api/sales/*  ─► WideWorldImporters
+```
+
+- La página llama al backend desde el servidor (`Backend/BackendApi.vb`): el token no llega al
+  navegador. El access token sale de la sesión en IIS (`SaveTokens` + `SesionEnServidor`); si vence
+  se renueva con el refresh token (`Backend/TokenDeAcceso.vb`). Si Keycloak ya no lo renueva, la página
+  cierra la sesión local y se recarga para volver a pasar por Keycloak.
+- `Web.config`:
+  - `backend:BaseUrl` — `http://192.168.50.10/api/` (por nginx + gateway, igual que el login).
+  - `backend:TimeoutSegundos` — `300`.
+  - `backend:LEgFrontNEWBACK` — `api` (backend nuevo) o `sql` (consulta directa como antes, para
+    regresar sin desplegar).
+- Requisitos: el mapper `audience-api` en `legacy-webforms` (ver *Realm importado*) y el contenedor de
+  `05_backend` arriba en la red `backend`, con `WWI_DB_CONNECTION` en el `.env.<ambiente>`.
+- Con `api` el grid pagina en el servidor: cada página es una llamada de 50 filas. El backend ordena por
+  fecha descendente; la consulta directa no tenía orden, así que las filas pueden salir en otro orden
+  pero el total es el mismo.
+
+Verificación:
+
+```bash
+# Sin token: 401 del backend (WWW-Authenticate: Bearer). 404 = el gateway no tiene la ruta /api
+curl -i http://192.168.50.10/api/sales/orders
+```
+
+En el navegador, `http://192.168.50.10/legacy/LEgFrontNEWBACK.aspx`: arriba dice el origen de datos
+activo; *Cargar Registros* llena las 5 tablas. Con el rango por defecto (2013-01-01 a 2016-12-31) el
+paginador debe dar los mismos totales con `api` y con `sql`.
 
 ## Migración de usuarios al primer login
 

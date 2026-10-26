@@ -35,8 +35,11 @@ services:
       ConnectionStrings__DefaultConnection: ${BACKEND_DB_CONNECTION:-${LEGACY_DB_CONNECTION:?Define LEGACY_DB_CONNECTION o BACKEND_DB_CONNECTION en el env file}}
       ConnectionStrings__WideWorldImporters: ${WWI_DB_CONNECTION:?Define WWI_DB_CONNECTION en el env file}
     healthcheck:
+      # /dev/tcp es de bash: con CMD-SHELL corre en dash (/bin/sh) y siempre falla
       test:
-        - CMD-SHELL
+        - CMD
+        - bash
+        - -c
         - >-
           exec 3<>/dev/tcp/127.0.0.1/8080 &&
           printf 'GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
