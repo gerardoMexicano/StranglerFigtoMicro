@@ -50,6 +50,7 @@ services:
       ReverseProxy__Clusters__legacy-cluster__Destinations__legacy__Address: ${LEGACY_BASE_URL}
       ReverseProxy__Clusters__taxes-cluster__Destinations__taxes__Address: ${TAXES_BASE_URL}
       ReverseProxy__Clusters__backend-api-cluster__Destinations__backend-api__Address: ${BACKEND_API_BASE_URL:-http://backend-api:8080}
+      ReverseProxy__Clusters__frontend-newapp-cluster__Destinations__frontend-newapp__Address: ${FRONTEND_NEWAPP_BASE_URL:-http://frontend-newapp:8080}
     networks:
       - edge
       - backend

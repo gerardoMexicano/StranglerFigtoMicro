@@ -24,6 +24,10 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+// La raíz lleva a la app nueva (06_frontend). 302 y no 301: el navegador no la guarda en caché
+// y la entrada se puede mover sin que los usuarios queden atados al destino viejo.
+app.MapMethods("/", [HttpMethods.Get, HttpMethods.Head], () => Results.Redirect("/newapp/"));
+
 app.MapReverseProxy();
 
 app.Run();
