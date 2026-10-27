@@ -1,0 +1,3 @@
+# Lo que corre dentro del contenedor (Linux) va con LF aunque se clone en Windows
+*.sh text eol=lf
+docker/* text eol=lf

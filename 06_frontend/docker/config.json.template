@@ -1,0 +1,12 @@
+{
+  "oidc": {
+    "authority": "${NEWAPP_OIDC_AUTHORITY}",
+    "clientId": "${NEWAPP_OIDC_CLIENT_ID}",
+    "scope": "${NEWAPP_OIDC_SCOPE}"
+  },
+  "apiBaseUrl": "${NEWAPP_API_BASE_URL}",
+  "apps": {
+    "taxesUrl": "${NEWAPP_TAXES_URL}",
+    "legacyUrl": "${NEWAPP_LEGACY_URL}"
+  }
+}
