@@ -1,0 +1,27 @@
+<main class="pagina">
+  <header class="encabezado">
+    <div>
+      <h1>Menú principal</h1>
+      @if (usuario(); as u) {
+        <p class="bienvenida">
+          Bienvenido, <strong>{{ u.name }}</strong>
+        </p>
+      }
+    </div>
+    <button type="button" class="boton boton-secundario" (click)="salir()">Cerrar sesión</button>
+  </header>
+
+  <ul class="tarjetas">
+    @for (opcion of opciones(); track opcion.id) {
+      <li class="tarjeta">
+        <h2>{{ opcion.title }}</h2>
+        <p>{{ opcion.description }}</p>
+        @if (opcion.external) {
+          <a class="boton" [href]="opcion.url">Abrir {{ opcion.title }}</a>
+        } @else {
+          <a class="boton" [routerLink]="opcion.url">Abrir {{ opcion.title }}</a>
+        }
+      </li>
+    }
+  </ul>
+</main>

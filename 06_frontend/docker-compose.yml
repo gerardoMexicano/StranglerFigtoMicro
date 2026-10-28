@@ -1,0 +1,53 @@
+# ==============================================================================
+# Stack independiente: 06_frontend (Angular 22 en /newapp/, nginx sin privilegios)
+#
+# Reutiliza las variables por ambiente de 07_reverse/01_deployment/.env.<ambiente>:
+#   docker network create backend   (si aún no existe en el host)
+#   docker compose --env-file ../07_reverse/01_deployment/.env.development up -d --build
+#   docker compose --env-file ../07_reverse/01_deployment/.env.testing     up -d --build
+#   docker compose --env-file ../07_reverse/01_deployment/.env.production  up -d --build
+#
+# El gateway (07_reverse/01_deployment) llega por la red "backend" a
+# http://frontend-newapp:8080 y le pasa /newapp/* sin quitar el prefijo.
+#
+# Proyecto compose: el env file define COMPOSE_PROJECT_NAME (ej. lab-development), así que
+# este stack comparte proyecto con 07_reverse y 05_backend. Cada carpeta ve a los servicios
+# de las otras como "orphan containers": el aviso es normal. NUNCA usar --remove-orphans
+# (up/down) en estos stacks: borraría nginx, gateway, Keycloak y backend-api.
+# ==============================================================================
+name: ${COMPOSE_PROJECT_NAME:?Define COMPOSE_PROJECT_NAME en el env file}
+
+services:
+  frontend-newapp:
+    image: frontend-newapp:${APP_ENV:?Define APP_ENV en el env file}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Mexico_City}
+
+      # config.json de la app (lo genera docker/40-newapp-config.sh al arrancar)
+      # - Authority: issuer público del realm; el navegador habla con Keycloak por nginx (/auth)
+      # - Client: frontend-spa, público con PKCE; redirect ${APP_PUBLIC_URL}/* ya cubre /newapp/
+      NEWAPP_OIDC_AUTHORITY: ${KC_HOSTNAME:?Define KC_HOSTNAME}/realms/${KC_REALM:?Define KC_REALM}
+      NEWAPP_OIDC_CLIENT_ID: ${KC_FRONTEND_CLIENT_ID:-frontend-spa}
+      NEWAPP_OIDC_SCOPE: ${NEWAPP_OIDC_SCOPE:-openid profile email}
+
+      # Mismo dominio que la app (nginx + gateway): rutas relativas, sin CORS
+      NEWAPP_API_BASE_URL: ${NEWAPP_API_BASE_URL:-/api}
+      NEWAPP_TAXES_URL: ${NEWAPP_TAXES_URL:-/taxes/Home/Menu}
+      NEWAPP_LEGACY_URL: ${NEWAPP_LEGACY_URL:-/legacy/Menu}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: backend
+    external: true

@@ -17,6 +17,7 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "src/main.ts",
+            "baseHref": "/newapp/",
             "tsConfig": "tsconfig.app.json",
             "assets": [
               {
@@ -42,7 +43,15 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              }
             },
             "development": {
               "optimization": false,
@@ -54,6 +63,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": {
               "buildTarget": "frontend:build:production"

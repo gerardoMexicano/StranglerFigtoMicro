@@ -1,6 +1,24 @@
 import { bootstrapApplication } from '@angular/platform-browser';
-import { appConfig } from './app/app.config';
+import { crearAppConfig } from './app/app.config';
 import { App } from './app/app';
+import { loadAppConfig } from './app/core/config/app-config';
 
-bootstrapApplication(App, appConfig)
-  .catch((err) => console.error(err));
+// config.json vive junto a index.html (/newapp/config.json); el contenedor lo genera al arrancar
+loadAppConfig(new URL('config.json', document.baseURI).href)
+  .then((config) => bootstrapApplication(App, crearAppConfig(config)))
+  .catch((err) => {
+    console.error(err);
+    mostrarError(err instanceof Error ? err.message : String(err));
+  });
+
+/** Sin configuración no hay app: se avisa en la página en lugar de dejarla en blanco. */
+function mostrarError(mensaje: string): void {
+  const titulo = document.createElement('h1');
+  titulo.textContent = 'No se pudo iniciar la aplicación';
+  const detalle = document.createElement('p');
+  detalle.textContent = mensaje;
+  const contenedor = document.createElement('main');
+  contenedor.setAttribute('role', 'alert');
+  contenedor.append(titulo, detalle);
+  document.body.replaceChildren(contenedor);
+}

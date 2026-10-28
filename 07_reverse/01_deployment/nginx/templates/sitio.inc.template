@@ -1,0 +1,33 @@
+# Cabeceras y rutas del sitio, compartidas por los server de 80 y 443 (default.conf.template).
+# Sale como /etc/nginx/conf.d/sitio.inc: sin ".conf", así nginx.conf no lo incluye a nivel http.
+# Plantilla procesada por el entrypoint de nginx (envsubst) al arrancar.
+# Solo se sustituyen las variables declaradas en el servicio nginx del compose
+# (APP_DOMAIN, KC_HTTP_RELATIVE_PATH); las de nginx ($host, ...) quedan intactas.
+
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+# $scheme / $server_port: http y 80, o https y 443, según el server que atendió
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Port $server_port;
+
+# Keycloak (identidad). Se pasa la URI completa: Keycloak ya sirve bajo el mismo prefijo.
+location ${KC_HTTP_RELATIVE_PATH}/ {
+    proxy_pass http://keycloak:8080;
+
+    # Keycloak manda cabeceras/cookies grandes
+    proxy_buffer_size 128k;
+    proxy_buffers 4 256k;
+    proxy_busy_buffers_size 256k;
+}
+
+location / {
+    proxy_pass http://gateway:8080;
+
+    # Las apps legacy (OWIN) responden al login con la cookie de sesión, que lleva
+    # claims + id_token cifrados (varios KB): con el buffer por defecto (4-8k) nginx da 502
+    proxy_buffer_size 128k;
+    proxy_buffers 4 256k;
+    proxy_busy_buffers_size 256k;
+}

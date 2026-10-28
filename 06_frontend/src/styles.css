@@ -1,1 +1,87 @@
-/* You can add global styles to this file, and also import other style files */
+/* Paleta de las apps legacy (LEgFrontNEWBACK.aspx / Menu.aspx) para que el salto entre apps no se note */
+:root {
+  --color-fondo: #f4f7f6;
+  --color-superficie: #ffffff;
+  --color-texto: #1a1a2e;
+  --color-texto-suave: #555;
+  --color-primario: #16213e;
+  --color-acento: #e94560;
+  --color-borde: #dde3e1;
+  --color-fila-par: #f2f2f2;
+  --color-error: #b3261e;
+  --radio: 8px;
+  --sombra: 0 2px 8px rgb(0 0 0 / 8%);
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  line-height: 1.5;
+}
+
+main[role='alert'] {
+  max-width: 40rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+}
+
+.pagina {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  border: 0;
+  border-radius: var(--radio);
+  background: var(--color-acento);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.boton:hover {
+  filter: brightness(0.92);
+}
+
+.boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.boton-secundario {
+  background: var(--color-primario);
+}
+
+.boton-texto {
+  background: transparent;
+  color: var(--color-primario);
+  padding-inline: 0.4rem;
+}
+
+.error {
+  color: var(--color-error);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--color-acento);
+  outline-offset: 2px;
+}

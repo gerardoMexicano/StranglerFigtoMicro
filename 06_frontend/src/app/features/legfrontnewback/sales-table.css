@@ -1,0 +1,72 @@
+.tabla {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra);
+}
+
+.titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.estado {
+  color: var(--color-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.vacia {
+  margin: 0;
+  color: var(--color-texto-suave);
+}
+
+.desplazable {
+  max-height: 28rem;
+  overflow: auto;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-primario);
+  color: #fff;
+  text-align: left;
+}
+
+td {
+  padding: 0.4rem 0.75rem;
+  border-top: 1px solid var(--color-borde);
+  font-variant-numeric: tabular-nums;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--color-fila-par);
+}
+
+.paginador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}

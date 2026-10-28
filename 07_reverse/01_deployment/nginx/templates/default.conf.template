@@ -1,34 +1,27 @@
 # Plantilla procesada por el entrypoint de nginx (envsubst) al arrancar.
 # Solo se sustituyen las variables declaradas en el servicio nginx del compose
 # (APP_DOMAIN, KC_HTTP_RELATIVE_PATH); las de nginx ($host, ...) quedan intactas.
+#
+# 80 y 443 sirven lo mismo (sitio.inc). Durante la migración a https el 80 sigue atendiendo:
+# las apps que aún regresan por http no pierden el login. Al terminar, el 80 pasa a redirigir.
+
 server {
     listen 80 default_server;
     server_name ${APP_DOMAIN};
 
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Forwarded-Host $host;
-    proxy_set_header X-Forwarded-Port $server_port;
+    include /etc/nginx/conf.d/sitio.inc;
+}
 
-    # Keycloak (identidad). Se pasa la URI completa: Keycloak ya sirve bajo el mismo prefijo.
-    location ${KC_HTTP_RELATIVE_PATH}/ {
-        proxy_pass http://keycloak:8080;
+# Certificado de nginx/certs/ (mkcert, ignorado por git). Sin lab.pem / lab-key.pem nginx no arranca.
+server {
+    listen 443 ssl default_server;
+    server_name ${APP_DOMAIN};
 
-        # Keycloak manda cabeceras/cookies grandes
-        proxy_buffer_size 128k;
-        proxy_buffers 4 256k;
-        proxy_busy_buffers_size 256k;
-    }
+    ssl_certificate     /etc/nginx/certs/lab.pem;
+    ssl_certificate_key /etc/nginx/certs/lab-key.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
 
-    location / {
-        proxy_pass http://gateway:8080;
-
-        # Las apps legacy (OWIN) responden al login con la cookie de sesión, que lleva
-        # claims + id_token cifrados (varios KB): con el buffer por defecto (4-8k) nginx da 502
-        proxy_buffer_size 128k;
-        proxy_buffers 4 256k;
-        proxy_busy_buffers_size 256k;
-    }
+    include /etc/nginx/conf.d/sitio.inc;
 }

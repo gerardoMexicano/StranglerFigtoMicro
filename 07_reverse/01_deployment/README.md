@@ -11,6 +11,7 @@ vive en un env file por ambiente.
                  └──/*──► gateway      └──► keycloak-db (Postgres)
                          │  red backend
                          ├──► legacy / taxes (Strangler Fig)
+                         ├──► backend-api (05_backend) / frontend-newapp (06_frontend)
    keycloak ── plugin ──► legacy-auth ──► SQL Server legacy (usuarios)   [temporal]
    keycloak ── SMTP ────► mailpit (solo development) / SMTP real
 ```
@@ -47,7 +48,7 @@ issuer OIDC se derivan de él dentro del env file.
 
 Con `APP_DOMAIN=192.168.50.10` (la IP de la máquina, para entrar desde otras PCs de la red):
 
-- App / gateway: http://192.168.50.10/
+- App / gateway: http://192.168.50.10/ (redirige a la app nueva, http://192.168.50.10/newapp/)
 - Consola admin de Keycloak: http://192.168.50.10/auth/admin/ (usuario `KC_BOOTSTRAP_ADMIN_USERNAME`)
 - Discovery OIDC: http://192.168.50.10/auth/realms/laboratorio/.well-known/openid-configuration
 - Bandeja de Mailpit (correos de verificación / restablecer contraseña): http://localhost:8025
@@ -81,6 +82,17 @@ Para reimportar después de editar el JSON en development:
 En un realm que ya existe, el mapper `audience-api` de `legacy-webforms` se agrega sin reimportar:
 `./keycloak/scripts/audiencia-legacy-webforms.sh <ambiente>` (usa el admin `KC_BOOTSTRAP_ADMIN_*`;
 si el mapper ya está, no hace nada).
+
+Para desarrollar `06_frontend` con `ng serve`, `frontend-spa` debe aceptar `http://localhost:4200`
+(redirect, web origin y post logout). No va en el JSON: se agrega y se quita a mano, solo en development
+(el script se niega con otro ambiente o si el env file no tiene `APP_ENV=development` y
+`KC_COMMAND=start-dev`):
+
+```bash
+./keycloak/scripts/frontend-spa-localhost.sh development ver       # muestra las URIs del cliente
+./keycloak/scripts/frontend-spa-localhost.sh development agregar
+./keycloak/scripts/frontend-spa-localhost.sh development quitar    # al terminar
+```
 
 ## Validar tokens desde una API .NET
 
@@ -181,6 +193,45 @@ curl -i http://192.168.50.10/api/sales/orders
 En el navegador, `http://192.168.50.10/legacy/LEgFrontNEWBACK.aspx`: arriba dice el origen de datos
 activo; *Cargar Registros* llena las 5 tablas. Con el rango por defecto (2013-01-01 a 2016-12-31) el
 paginador debe dar los mismos totales con `api` y con `sql`.
+
+## App nueva (`/newapp`, `06_frontend`)
+
+```
+navegador ─► nginx ─► gateway ─► /           302 → /newapp/
+                                 /newapp/*   frontend-newapp:8080 (06_frontend, red backend)
+             Angular ─► nginx ─► /auth/*     Keycloak (cliente frontend-spa, PKCE)
+                      ─► nginx ─► gateway ─► /api/*  backend-api (Bearer del usuario)
+```
+
+- Ruta `frontend-newapp-route` (`/newapp/{**catch-all}`) sin quitar el prefijo: la app se construye con
+  `baseHref: /newapp/`. Destino en `FRONTEND_NEWAPP_BASE_URL` (por defecto `http://frontend-newapp:8080`).
+- `/` responde 302 a `/newapp/` (`Gateway/Program.cs`). Es 302 y no 301 para que el navegador no guarde
+  la redirección y la entrada se pueda mover. `/taxes`, `/legacy` y `/api` no cambian.
+- La app es una sola imagen; su `config.json` (Keycloak, API, URLs de las apps legacy) se genera al
+  arrancar el contenedor. Detalle en [`06_frontend/README.md`](../../06_frontend/README.md).
+- El contenedor se levanta con su propio compose (`06_frontend`) y comparte el proyecto
+  `COMPOSE_PROJECT_NAME` con este stack y con `05_backend`. **Nunca usar `--remove-orphans`** en ninguno
+  de los tres: cada uno ve a los servicios de los otros como huérfanos y los borraría.
+- Orden al desplegar: primero `06_frontend`, después el gateway. Si `frontend-newapp` no está arriba,
+  `/` y `/newapp/*` dan 502 y lo demás sigue funcionando.
+
+Verificación:
+
+```bash
+curl -i http://192.168.50.10/              # 302, Location: /newapp/
+curl -i http://192.168.50.10/newapp/menu   # 200 (lo sirve frontend-newapp)
+```
+
+En el navegador: `/` → presentación → *Entrar* → Keycloak → menú. Desde el menú, `/taxes` y `/legacy`
+entran sin pedir contraseña (sesión SSO de Keycloak).
+
+Pendientes:
+
+- *Cerrar sesión* en `/newapp` cierra la sesión de Keycloak, pero las sesiones locales de `/taxes` y
+  `/legacy` siguen vivas hasta que expiren.
+- Menú y rutas por rol (`usuario`, `admin`, `invitado`).
+- Quitar del realm las URLs de IIS Express (`LEGACY_*_DEV_URL`) cuando ya no se use.
+- Despliegue de `06_frontend` desde Jenkins.
 
 ## Migración de usuarios al primer login
 
