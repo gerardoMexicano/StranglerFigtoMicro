@@ -82,6 +82,9 @@ bazel-out/
 .env.testing
 .env.production
 
+# Certificado y llave de nginx (mkcert): solo en el host, nunca en git
+07_reverse/01_deployment/nginx/certs/
+
 *.bak
 # Coverage & Tests
 coverage/
