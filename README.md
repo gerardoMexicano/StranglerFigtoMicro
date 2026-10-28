@@ -10,6 +10,8 @@ Repositorio de laboratorio que simula el entorno de trabajo actual con dos aplic
 | `02_webapp_webforms` | ASP.NET Web Forms (.NET Framework 4.8) | Simulación del sitio Web Forms actual |
 | `03_experimento_3` | — | Experimento adicional (reservado) |
 
+Roadmap de la migración (diagrama por pasos): [`00_docs/roadmap_migracion.md`](00_docs/roadmap_migracion.md)
+
 ## Requisitos
 
 - Visual Studio 2022
