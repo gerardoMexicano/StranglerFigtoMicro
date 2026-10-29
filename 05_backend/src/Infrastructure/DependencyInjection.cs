@@ -1,5 +1,6 @@
 using Application.Common.Abstractions;
 using Application.Features.Sales.Abstractions;
+using Application.Features.Taxes.Abstractions;
 using Infrastructure.Identity;
 using Infrastructure.Microservices;
 using Infrastructure.Persistence;
@@ -18,7 +19,7 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // 1. Persistencia con Dapper (DefaultConnection y WideWorldImporters dedicada)
+        // 1. Persistencia con Dapper (DefaultConnection, WideWorldImporters y TaxesProto dedicadas)
         services.AddSingleton<IDbConnectionFactory>(_ =>
         {
             var connectionString = configuration.GetConnectionString("DefaultConnection")
@@ -33,7 +34,15 @@ public static class DependencyInjection
             return new WwiSqlConnectionFactory(wwiConnectionString);
         });
 
+        services.AddSingleton<ITaxesDbConnectionFactory>(_ =>
+        {
+            var taxesConnectionString = configuration.GetConnectionString("TaxesProto")
+                ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'ConnectionStrings:TaxesProto'.");
+            return new TaxesSqlConnectionFactory(taxesConnectionString);
+        });
+
         services.AddScoped<ISalesReadRepository, SalesReadRepository>();
+        services.AddScoped<ITaxesReadRepository, TaxesReadRepository>();
 
         // 2. Configuración OIDC de Keycloak (contrato Oidc__* compartido con 07_reverse/01_deployment)
         services.AddOptions<OidcOptions>()
