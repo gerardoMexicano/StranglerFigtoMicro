@@ -6,7 +6,7 @@ vive en un env file por ambiente.
 
 ```
                  ┌──────────── red edge ─────────────┐
- navegador ──► nginx :80 ──/auth/*──► keycloak ──┐   │
+ navegador ──► nginx :443 ─/auth/*──► keycloak ──┐   │
                  │                     │  red identity (interna)
                  └──/*──► gateway      └──► keycloak-db (Postgres)
                          │  red backend
@@ -29,7 +29,7 @@ docker compose --env-file .env.development up -d --build
 
 `edge` y `backend` son externas para que otros stacks (sqlserver, jenkins, etc.)
 se unan sin que un `down` las borre. No levantes dos versiones de este stack
-a la vez en el mismo host: comparten el puerto 80 y el nombre `gateway` en `edge`.
+a la vez en el mismo host: comparten los puertos 80/443 y el nombre `gateway` en `edge`.
 
 Igual para `.env.testing` y `.env.production`. Los tres están en `.gitignore`;
 solo la plantilla se versiona. Si falta una contraseña, compose se niega a arrancar.
@@ -38,7 +38,7 @@ solo la plantilla se versiona. Si falta una contraseña, compose se niega a arra
 | :--- | :--- | :--- |
 | `KC_COMMAND` | `start-dev` | `start` |
 | `APP_DOMAIN` | `localhost` | dominio real |
-| `APP_SCHEME` | `http` | `https` (requiere TLS delante de Nginx) |
+| `APP_SCHEME` | `https` (laboratorio, ver *HTTPS*) | `https` |
 | `COMPOSE_PROJECT_NAME` | `lab-development` | `lab-testing` / `lab-production` |
 
 Cambiar de dominio = cambiar `APP_DOMAIN`. `APP_PUBLIC_URL`, `KC_HOSTNAME` y el
@@ -48,10 +48,71 @@ issuer OIDC se derivan de él dentro del env file.
 
 Con `APP_DOMAIN=192.168.50.10` (la IP de la máquina, para entrar desde otras PCs de la red):
 
-- App / gateway: http://192.168.50.10/ (redirige a la app nueva, http://192.168.50.10/newapp/)
-- Consola admin de Keycloak: http://192.168.50.10/auth/admin/ (usuario `KC_BOOTSTRAP_ADMIN_USERNAME`)
-- Discovery OIDC: http://192.168.50.10/auth/realms/laboratorio/.well-known/openid-configuration
+- App / gateway: https://192.168.50.10/ (redirige a la app nueva, https://192.168.50.10/newapp/)
+- Consola admin de Keycloak: https://192.168.50.10/auth/admin/ (usuario `KC_BOOTSTRAP_ADMIN_USERNAME`)
+- Discovery OIDC: https://192.168.50.10/auth/realms/laboratorio/.well-known/openid-configuration
 - Bandeja de Mailpit (correos de verificación / restablecer contraseña): http://localhost:8025
+- `http://192.168.50.10/...` responde 301 a la misma ruta en https.
+
+## HTTPS (certificado de mkcert)
+
+nginx termina TLS en el 443 con `nginx/certs/lab.pem` + `lab-key.pem` (carpeta en `.gitignore`; sin
+ellos nginx no arranca). Detrás de nginx todo sigue en http por las redes de Docker.
+
+El certificado lo firma la CA local de mkcert de la PC de desarrollo (`mkcert -CAROOT`). **`rootCA-key.pem`
+no sale de esa PC ni va a git**: con ella cualquiera emite certificados en los que confían los equipos
+que instalaron la CA.
+
+```bash
+# En la PC de la CA (una vez): instala la CA en el almacén de esa PC
+mkcert -install
+# Certificado del laboratorio (SAN: la IP pública, localhost y 127.0.0.1). Vence en ~2 años
+mkcert -cert-file nginx/certs/lab.pem -key-file nginx/certs/lab-key.pem 192.168.50.10 localhost 127.0.0.1
+```
+
+Cada equipo que entra al laboratorio debe confiar en la CA: copiar **solo** `rootCA.pem` e importarlo
+(PowerShell como administrador):
+
+```powershell
+Import-Certificate -FilePath .\rootCA.pem -CertStoreLocation Cert:\LocalMachine\Root
+```
+
+- PCs de los usuarios: sin la CA el navegador marca el sitio como inseguro y `/newapp` no inicia sesión
+  (Web Crypto solo existe en contexto seguro).
+- IIS (192.168.50.243): obligatorio. Las apps legacy leen el discovery de Keycloak y WebForms llama a
+  `/api` por https desde el servidor.
+- Firefox usa su propio almacén: activar `security.enterprise_roots.enabled` o importar la CA ahí.
+- Renovar el certificado: volver a correr `mkcert` y `docker compose ... up -d --no-deps --force-recreate nginx`.
+
+El puerto 80 depende de `APP_SCHEME` (`nginx/templates/puerto80-<esquema>.inc.template`): con `https`
+redirige con 301 a `APP_PUBLIC_URL`; con `http` sirve el sitio igual que el 443.
+
+nginx resuelve `keycloak` y `gateway` con el DNS de Docker en cada petición (`resolver` en
+`sitio.inc.template`): recrear esos contenedores no requiere reiniciar nginx.
+
+Para probar desde Windows usar el navegador o PowerShell; `curl.exe` (Schannel) no valida bien el SAN de
+IP del certificado. Desde Linux: `curl --cacert rootCA.pem https://192.168.50.10/...`.
+
+### Corte de http a https
+
+Así se hizo en el laboratorio; sirve igual para otro ambiente. Desde `07_reverse/01_deployment`:
+
+1. Antes del corte, que Keycloak acepte las dos versiones de cada URI (no cambia nada para los usuarios):
+   `./keycloak/scripts/realm-https.sh development agregar`
+2. Respaldo del env (`cp .env.development .env.development.http.bak`) y `APP_SCHEME=https`.
+3. Recrear lo que toma el issuer del env:
+   - `docker compose --env-file .env.development up -d --no-deps keycloak gateway nginx`
+   - `05_backend` y `06_frontend` con su propio compose (`up -d`, **sin** `--remove-orphans`).
+4. En el IIS: respaldar `C:\Deploy\taxes` y `C:\Deploy\legacy`, publicar las apps con `Release`
+   (`Web.Release.config` ya trae https) y reciclar los pools `legadosaas-taxes-Pool` y `legadosaas-legacy-Pool`.
+5. Verificar desde otra PC con la CA: login en `/taxes`, SSO a `/legacy`, `LEgFrontNEWBACK.aspx`, login
+   en `/newapp` y cerrar sesión.
+6. Días después, sin problemas: `./keycloak/scripts/realm-https.sh development quitar-http` (quita las
+   URIs http y pasa `rootUrl` / `baseUrl` a https) y borrar `.env.development.http.bak`.
+
+Regresar a http (antes del paso 6): restaurar `.env.development.http.bak`, repetir el paso 3 y, en el IIS,
+restaurar los respaldos y reciclar los pools. El realm aún tiene las URIs http, así que Keycloak no se toca.
+Después del paso 6, regresar exige volver a agregar las URIs http en la consola de Keycloak.
 
 ## Realm importado
 
@@ -98,7 +159,7 @@ Para desarrollar `06_frontend` con `ng serve`, `frontend-spa` debe aceptar `http
 
 Los servicios en la red `backend` reciben (ver `x-oidc-env` en el compose):
 
-- `Oidc__Authority` — issuer público, p. ej. `http://localhost/auth/realms/laboratorio`
+- `Oidc__Authority` — issuer público, p. ej. `https://192.168.50.10/auth/realms/laboratorio`
 - `Oidc__MetadataAddress` — discovery por red interna (`http://keycloak:8080/auth/...`)
 - `Oidc__Audience` — `backend-api`
 
@@ -156,8 +217,9 @@ navegador ─► nginx ─► gateway ─► IIS 192.168.50.243:8081/taxes  (MVC
   (`${APP_PUBLIC_URL}/taxes/signin-oidc`, `${APP_PUBLIC_URL}/taxes/`, igual con `/legacy`).
 - `Secrets.config` se copia a mano (o desde Jenkins) a la carpeta de cada app en el servidor.
 
-Al pasar a https (TLS en nginx, `APP_SCHEME=https`): cambiar las URLs `http://` del `Web.Release.config`
-y de Keycloak a `https://`, y `oidc:RequireHttpsMetadata` a `true`.
+- https: `Web.Release.config` y el `Web.config` base usan `https://192.168.50.10/...` y
+  `oidc:RequireHttpsMetadata=true`. El IIS (y la PC donde se depura con IIS Express) debe tener
+  instalada la CA de mkcert (ver *HTTPS*).
 
 ### WebForms contra el backend nuevo (`LEgFrontNEWBACK.aspx`)
 
@@ -173,7 +235,7 @@ navegador ─► nginx ─► gateway ─► IIS /legacy/LEgFrontNEWBACK.aspx
   se renueva con el refresh token (`Backend/TokenDeAcceso.vb`). Si Keycloak ya no lo renueva, la página
   cierra la sesión local y se recarga para volver a pasar por Keycloak.
 - `Web.config`:
-  - `backend:BaseUrl` — `http://192.168.50.10/api/` (por nginx + gateway, igual que el login).
+  - `backend:BaseUrl` — `https://192.168.50.10/api/` (por nginx + gateway, igual que el login).
   - `backend:TimeoutSegundos` — `300`.
   - `backend:LEgFrontNEWBACK` — `api` (backend nuevo) o `sql` (consulta directa como antes, para
     regresar sin desplegar).
@@ -187,10 +249,10 @@ Verificación:
 
 ```bash
 # Sin token: 401 del backend (WWW-Authenticate: Bearer). 404 = el gateway no tiene la ruta /api
-curl -i http://192.168.50.10/api/sales/orders
+curl -i --cacert rootCA.pem https://192.168.50.10/api/sales/orders
 ```
 
-En el navegador, `http://192.168.50.10/legacy/LEgFrontNEWBACK.aspx`: arriba dice el origen de datos
+En el navegador, `https://192.168.50.10/legacy/LEgFrontNEWBACK.aspx`: arriba dice el origen de datos
 activo; *Cargar Registros* llena las 5 tablas. Con el rango por defecto (2013-01-01 a 2016-12-31) el
 paginador debe dar los mismos totales con `api` y con `sql`.
 
@@ -218,8 +280,8 @@ navegador ─► nginx ─► gateway ─► /           302 → /newapp/
 Verificación:
 
 ```bash
-curl -i http://192.168.50.10/              # 302, Location: /newapp/
-curl -i http://192.168.50.10/newapp/menu   # 200 (lo sirve frontend-newapp)
+curl -i --cacert rootCA.pem https://192.168.50.10/              # 302, Location: /newapp/
+curl -i --cacert rootCA.pem https://192.168.50.10/newapp/menu   # 200 (lo sirve frontend-newapp)
 ```
 
 En el navegador: `/` → presentación → *Entrar* → Keycloak → menú. Desde el menú, `/taxes` y `/legacy`

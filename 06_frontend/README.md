@@ -30,7 +30,7 @@ src/
 │       ├── menu/                 # Menú (menu-options.ts: opciones con roles, hoy vacíos)
 │       └── legfrontnewback/      # SalesApiService + sales-table (paginado de 50 en el servidor)
 public/config.json                # Config para ng serve (en el contenedor se genera al arrancar)
-proxy.conf.json                   # ng serve: /api → http://192.168.50.10
+proxy.conf.json                   # ng serve: /api → https://192.168.50.10
 docker/                           # nginx, plantillas y script que genera config.json y la CSP
 ```
 
@@ -62,8 +62,17 @@ pnpm install
 pnpm start          # http://localhost:4200/newapp/
 ```
 
-- `public/config.json` apunta al Keycloak del laboratorio (`http://192.168.50.10/auth/realms/laboratorio`).
-- `proxy.conf.json` manda `/api` al laboratorio: mismo origen que la app, sin CORS.
+- `public/config.json` apunta al Keycloak del laboratorio (`https://192.168.50.10/auth/realms/laboratorio`).
+  `localhost:4200` sigue en http: el navegador lo trata como contexto seguro.
+- `proxy.conf.json` manda `/api` al laboratorio por https (mismo origen que la app, sin CORS) y valida el
+  certificado. Node debe confiar en la CA de mkcert (ver `07_reverse/01_deployment/README.md`, *HTTPS*):
+
+  ```powershell
+  $env:NODE_USE_SYSTEM_CA = "1"   # Node 24: usa el almacén de Windows, donde mkcert -install dejó la CA
+  # o bien: $env:NODE_EXTRA_CA_CERTS = "$(mkcert -CAROOT)\rootCA.pem"
+  ```
+
+  Sin eso falla el proxy de `/api` (`UNABLE_TO_VERIFY_LEAF_SIGNATURE` en la consola de `ng serve`).
 - Para iniciar sesión, `frontend-spa` debe aceptar `http://localhost:4200`. Se agrega y se quita con un
   script que solo corre en development (desde `07_reverse/01_deployment`):
 
@@ -117,9 +126,9 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development up -d --b
 Verificación:
 
 ```bash
-curl -i http://192.168.50.10/                   # 302 → /newapp/
-curl -i http://192.168.50.10/newapp/menu        # 200 (index.html; el guard actúa en el navegador)
-curl -s http://192.168.50.10/newapp/config.json # config generada al arrancar
+curl -i --cacert rootCA.pem https://192.168.50.10/                   # 302 → /newapp/
+curl -i --cacert rootCA.pem https://192.168.50.10/newapp/menu        # 200 (index.html; el guard actúa en el navegador)
+curl -s --cacert rootCA.pem https://192.168.50.10/newapp/config.json # config generada al arrancar
 ```
 
 ## 6. Pendientes
