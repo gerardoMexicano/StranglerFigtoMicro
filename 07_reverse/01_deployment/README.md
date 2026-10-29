@@ -189,7 +189,39 @@ logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_
   nginx (8 KB por línea: 400 "Request Header Or Cookie Too Large"). Si IIS recicla el app pool la sesión
   se pierde y el usuario vuelve a entrar por Keycloak sin contraseña.
 - SSO: cada app tiene su cookie; entrar en una deja abierta la sesión de Keycloak y la otra entra sin
-  pedir contraseña. Cerrar sesión en cualquiera cierra la de Keycloak.
+  pedir contraseña. Cerrar sesión en cualquiera cierra la de Keycloak y la de las otras apps (ver
+  *Logout global*).
+
+### Logout global (front-channel)
+
+```
+"Cerrar sesión" en /taxes, /legacy o /newapp ─► Keycloak end_session (cierra la sesión SSO)
+   └─► página de Keycloak con un iframe por app con sesión:
+         /taxes/Account/FrontchannelLogout?iss=…&sid=…    MVC borra .AUTH.MVC
+         /legacy/FrontchannelLogout.ashx?iss=…&sid=…      WebForms borra .AUTH.WEBFORMS
+   └─► post_logout_redirect_uri de la app que pidió salir
+/newapp (pestaña abierta) ─► check session de Keycloak ─► "changed" ─► borra sus tokens y vuelve a /newapp/
+```
+
+- Cada endpoint borra su cookie solo si `iss` es su `oidc:Authority` y `sid` es el de la sesión
+  (`App_Start/CierreDesdeKeycloak`): otra página no puede cerrar la sesión con un iframe sin conocer el
+  `sid`. Al borrar la cookie se borra también la sesión de `SesionEnServidor`. Responde 200 vacío, sin caché.
+- En WebForms el handler es anónimo (`<location path="FrontchannelLogout.ashx">` en el `Web.config`).
+- Keycloak: `frontchannelLogout`, `frontchannel.logout.url` y `frontchannel.logout.session.required`
+  en `legacy-mvc` y `legacy-webforms`. En un realm nuevo los trae el JSON; en uno existente:
+
+  ```bash
+  ./keycloak/scripts/logout-global.sh development ver       # ver | aplicar | quitar
+  ```
+
+  Orden: primero publicar las apps (los endpoints deben responder 200), después `aplicar`.
+  `quitar` deja la URL vacía y todo vuelve a como era (cada app cierra solo su sesión).
+- Límites:
+  - Solo cubre el logout que pasa por el navegador. Cerrar la sesión desde la consola de Keycloak o
+    que venza su sesión no avisa a las apps; sus cookies siguen hasta `auth:SesionMinutos`
+    (back-channel lo cubriría: Keycloak llamaría al IIS de servidor a servidor).
+  - Las sesiones de IIS Express no se cierran: la URL apunta a las apps publicadas.
+  - Mientras Keycloak carga los iframes se ve un momento una página en blanco.
 
 ### Desplegadas detrás del gateway
 
@@ -287,11 +319,24 @@ curl -i --cacert rootCA.pem https://192.168.50.10/newapp/menu   # 200 (lo sirve 
 En el navegador: `/` → presentación → *Entrar* → Keycloak → menú. Desde el menú, `/taxes` y `/legacy`
 entran sin pedir contraseña (sesión SSO de Keycloak).
 
+### Roles
+
+Roles de realm (los mismos que el plugin de migración trae del legacy):
+
+| Opción | `usuario` | `admin` | `invitado` |
+| :--- | :---: | :---: | :---: |
+| BrokenTaxes (`/taxes`) | ✓ | ✓ | — |
+| Legacy WebForms (`/legacy`) | ✓ | ✓ | — |
+| LEgFrontNEWBACK (`/newapp` y `/api/sales`) | ✓ | ✓ | ✓ |
+
+- `/api/sales` exige la política `Lectura` (cualquiera de los tres): sin rol, 403. Es la que protege los
+  datos, también cuando llama WebForms (su token trae `realm_access` por el scope `roles`).
+- En `/newapp`, el menú y las rutas siguen la tabla; sin ninguno de los tres roles se ve `/sin-acceso`.
+- Ocultar `/taxes` y `/legacy` en el menú no los protege: los permisos dentro de las apps legacy siguen
+  siendo los suyos.
+
 Pendientes:
 
-- *Cerrar sesión* en `/newapp` cierra la sesión de Keycloak, pero las sesiones locales de `/taxes` y
-  `/legacy` siguen vivas hasta que expiren.
-- Menú y rutas por rol (`usuario`, `admin`, `invitado`).
 - Quitar del realm las URLs de IIS Express (`LEGACY_*_DEV_URL`) cuando ya no se use.
 - Despliegue de `06_frontend` desde Jenkins.
 

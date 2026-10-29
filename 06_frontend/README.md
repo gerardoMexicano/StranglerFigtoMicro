@@ -24,10 +24,11 @@ src/
 │   ├── app.routes.ts             # '' pública; menu y legfrontnewback con authGuard
 │   ├── core/
 │   │   ├── config/app-config.ts  # Contrato y validación de config.json
-│   │   └── auth/                 # AuthService, OidcAuthService, guard, interceptor, MemorySecurityStorage
+│   │   └── auth/                 # AuthService, OidcAuthService, guards (sesión y rol), roles.ts, interceptor, MemorySecurityStorage
 │   └── features/
 │       ├── inicio/               # Presentación
-│       ├── menu/                 # Menú (menu-options.ts: opciones con roles, hoy vacíos)
+│       ├── menu/                 # Menú (menu-options.ts: opciones y roles que las ven)
+│       ├── sin-acceso/           # Con sesión pero sin ningún rol de la app
 │       └── legfrontnewback/      # SalesApiService + sales-table (paginado de 50 en el servidor)
 public/config.json                # Config para ng serve (en el contenedor se genera al arrancar)
 proxy.conf.json                   # ng serve: /api → https://192.168.50.10
@@ -51,6 +52,16 @@ docker/                           # nginx, plantillas y script que genera config
   a la app, Keycloak y la API).
 - SSO con las apps legacy: entrar en `/newapp` abre la sesión de Keycloak, y `/taxes` y `/legacy` entran
   sin contraseña.
+- **Logout global:** *Cerrar sesión* cierra la sesión de Keycloak, que a su vez cierra las de `/taxes` y
+  `/legacy` (front-channel, ver `07_reverse/01_deployment/README.md`). Al revés, si se sale desde
+  `/taxes` o `/legacy`, el *check session* de Keycloak (un iframe que revisa la sesión cada pocos
+  segundos) avisa a esta app, que borra sus tokens de memoria y vuelve a la presentación. Solo se activa
+  con Keycloak en el mismo origen que la app (`usarCheckSession`): desde `ng serve` el iframe no recibe
+  la cookie de Keycloak y la sesión acaba al fallar la siguiente renovación del token.
+- **Roles** (`core/auth/roles.ts`, de `realm_access.roles`): `/menu` y `/legfrontnewback` piden
+  `usuario`, `admin` o `invitado` (`roleGuard`, después de `authGuard`); sin ninguno, `/sin-acceso`. En el
+  menú, `/taxes` y `/legacy` son para `usuario` y `admin`; LEgFrontNEWBACK también para `invitado`.
+  Es solo presentación: los datos los protege el backend (política `Lectura` en `/api/sales`).
 
 ## 3. Desarrollo local (`ng serve`)
 
@@ -133,9 +144,5 @@ curl -s --cacert rootCA.pem https://192.168.50.10/newapp/config.json # config ge
 
 ## 6. Pendientes
 
-- **Logout global:** *Cerrar sesión* cierra la sesión de Keycloak, pero las sesiones locales de `/taxes`
-  y `/legacy` siguen vivas hasta que expiren.
-- **Roles:** `menu-options.ts` ya admite roles por opción (hoy vacíos) y el usuario trae
-  `realm_access.roles`; falta decidir qué ve cada rol y protegerlo también en las rutas.
 - **LEgFrontNEWBACK:** cuando se valide, decidir si reemplaza a la página WebForms.
 - **Jenkins:** despliegue de esta imagen.

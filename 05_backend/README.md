@@ -116,14 +116,23 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development down
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Anónimo | Healthcheck del contenedor (usado por Docker y el Gateway). Devuelve `200 OK` (`Healthy`). |
 | `GET` | `/api/system/me` | `Bearer <JWT Keycloak>` | Valida el token contra Keycloak, transforma los roles de `realm_access` / `resource_access` (`admin`, `usuario`, `invitado`) y retorna el `CurrentUserResponse`. |
-| `GET` | `/api/sales/customer-transactions` | `Bearer <JWT Keycloak>` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.CustomerTransactions`. |
-| `GET` | `/api/sales/invoice-lines` | `Bearer <JWT Keycloak>` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.InvoiceLines`. |
-| `GET` | `/api/sales/invoices` | `Bearer <JWT Keycloak>` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Invoices`. |
-| `GET` | `/api/sales/order-lines` | `Bearer <JWT Keycloak>` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.OrderLines`. |
-| `GET` | `/api/sales/orders` | `Bearer <JWT Keycloak>` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Orders`. |
+| `GET` | `/api/sales/customer-transactions` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.CustomerTransactions`. |
+| `GET` | `/api/sales/invoice-lines` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.InvoiceLines`. |
+| `GET` | `/api/sales/invoices` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Invoices`. |
+| `GET` | `/api/sales/order-lines` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.OrderLines`. |
+| `GET` | `/api/sales/orders` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Orders`. |
 | `GET` | `/openapi/v1.json` | Anónimo *(Solo `Development`)* | Especificación OpenAPI 3 nativa de .NET 10. |
 
-Desde fuera de Docker los endpoints `/api/*` se alcanzan por nginx + gateway (`http://<host>/api/...`, ruta
+Políticas de autorización (`Infrastructure/DependencyInjection.cs`), sobre los roles de realm que
+`KeycloakClaimsTransformation` saca de `realm_access`:
+
+| Política | Roles | Uso |
+| :--- | :--- | :--- |
+| `Lectura` | `usuario`, `admin`, `invitado` | `/api/sales/*`. Sin token 401; con token sin ninguno de los roles, 403. |
+| `UsuarioOrAdmin` | `usuario`, `admin` | Reservada para operaciones que modifiquen datos. |
+| `AdminOnly` | `admin` | Reservada para administración. |
+
+Desde fuera de Docker los endpoints `/api/*` se alcanzan por nginx + gateway (`https://<host>/api/...`, ruta
 `backend-api-route` de `07_reverse/01_deployment/Gateway`). El primer consumidor es
 `02_webapp_webforms/.../LEgFrontNEWBACK.aspx`, que llama desde el servidor con el token del usuario
 (cliente `legacy-webforms`, que emite `aud: backend-api`).
