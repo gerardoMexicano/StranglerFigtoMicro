@@ -1,15 +1,16 @@
 # Plantilla procesada por el entrypoint de nginx (envsubst) al arrancar.
 # Solo se sustituyen las variables declaradas en el servicio nginx del compose
-# (APP_DOMAIN, KC_HTTP_RELATIVE_PATH); las de nginx ($host, ...) quedan intactas.
+# (APP_SCHEME, APP_DOMAIN, APP_PUBLIC_URL, KC_HTTP_RELATIVE_PATH); las de nginx ($host, ...) quedan intactas.
 #
-# 80 y 443 sirven lo mismo (sitio.inc). Durante la migración a https el 80 sigue atendiendo:
-# las apps que aún regresan por http no pierden el login. Al terminar, el 80 pasa a redirigir.
+# El 80 depende de APP_SCHEME (puerto80-<esquema>.inc):
+#   http   sirve el sitio (sitio.inc), igual que el 443
+#   https  redirige con 301 a APP_PUBLIC_URL
 
 server {
     listen 80 default_server;
     server_name ${APP_DOMAIN};
 
-    include /etc/nginx/conf.d/sitio.inc;
+    include /etc/nginx/conf.d/puerto80-${APP_SCHEME}.inc;
 }
 
 # Certificado de nginx/certs/ (mkcert, ignorado por git). Sin lab.pem / lab-key.pem nginx no arranca.

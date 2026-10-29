@@ -1,0 +1,2 @@
+# Puerto 80 con APP_SCHEME=http: sirve el sitio igual que el 443 (ver default.conf.template).
+include /etc/nginx/conf.d/sitio.inc;
