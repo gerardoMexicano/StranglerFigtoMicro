@@ -2,7 +2,7 @@ import { ROLES_LECTURA, ROLES_LEGACY } from '../../core/auth/roles';
 import { AppConfig } from '../../core/config/app-config';
 
 export interface MenuOption {
-  id: 'taxes' | 'legacy' | 'legfrontnewback';
+  id: 'taxes' | 'legacy' | 'legfrontnewback' | 'usuarios';
   title: string;
   description: string;
   url: string;
@@ -36,6 +36,14 @@ export function buildMenuOptions(config: AppConfig): MenuOption[] {
       title: 'LEgFrontNEWBACK',
       description: 'Ventas de WideWorldImporters desde el backend .NET 10.',
       url: '/legfrontnewback',
+      external: false,
+      roles: ROLES_LECTURA,
+    },
+    {
+      id: 'usuarios',
+      title: 'Usuarios',
+      description: 'Checador de asistencia: registra tu ubicación (antes Usuarios.aspx).',
+      url: '/usuarios',
       external: false,
       roles: ROLES_LECTURA,
     },
