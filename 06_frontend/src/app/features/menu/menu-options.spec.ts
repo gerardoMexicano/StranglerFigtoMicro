@@ -12,11 +12,12 @@ const config: AppConfig = {
 };
 
 describe('buildMenuOptions', () => {
-  it('arma las tres opciones en orden: taxes, legacy y legfrontnewback', () => {
+  it('arma las cuatro opciones en orden: taxes, legacy, legfrontnewback y usuarios', () => {
     expect(buildMenuOptions(config).map((o) => o.id)).toEqual([
       'taxes',
       'legacy',
       'legfrontnewback',
+      'usuarios',
     ]);
   });
 
@@ -33,6 +34,12 @@ describe('buildMenuOptions', () => {
     expect(legfrontnewback).toMatchObject({ url: '/legfrontnewback', external: false });
   });
 
+  it('usuarios es una ruta interna de /newapp: ya no abre Usuarios.aspx', () => {
+    const usuarios = buildMenuOptions(config)[3];
+
+    expect(usuarios).toMatchObject({ url: '/usuarios', external: false });
+  });
+
   it('cada opción tiene título y descripción para la tarjeta', () => {
     for (const opcion of buildMenuOptions(config)) {
       expect(opcion.title.trim()).not.toBe('');
@@ -40,18 +47,19 @@ describe('buildMenuOptions', () => {
     }
   });
 
-  it('las apps legacy son para usuario y admin; LEgFrontNEWBACK también para invitado', () => {
+  it('las apps legacy son para usuario y admin; las vistas de /newapp también para invitado', () => {
     expect(Object.fromEntries(buildMenuOptions(config).map((o) => [o.id, o.roles]))).toEqual({
       taxes: ['usuario', 'admin'],
       legacy: ['usuario', 'admin'],
       legfrontnewback: ['usuario', 'admin', 'invitado'],
+      usuarios: ['usuario', 'admin', 'invitado'],
     });
   });
 
   it.each([
-    [['usuario'], ['taxes', 'legacy', 'legfrontnewback']],
-    [['admin'], ['taxes', 'legacy', 'legfrontnewback']],
-    [['invitado'], ['legfrontnewback']],
+    [['usuario'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios']],
+    [['admin'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios']],
+    [['invitado'], ['legfrontnewback', 'usuarios']],
     [[], []],
   ])('con roles %j ve %j', (roles, ids) => {
     expect(filterByRole(buildMenuOptions(config), roles).map((o) => o.id)).toEqual(ids);

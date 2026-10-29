@@ -25,6 +25,13 @@ export const routes: Routes = [
       import('./features/legfrontnewback/legfrontnewback').then((m) => m.Legfrontnewback),
   },
   {
+    // Reemplaza /legacy/Usuarios.aspx (Checador de Asistencia); invitado entra a ver, no registra
+    path: 'usuarios',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () => import('./features/usuarios/usuarios').then((m) => m.Usuarios),
+  },
+  {
     path: 'sin-acceso',
     canActivate: [authGuard],
     loadComponent: () => import('./features/sin-acceso/sin-acceso').then((m) => m.SinAcceso),
