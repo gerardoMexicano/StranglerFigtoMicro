@@ -15,7 +15,7 @@ public sealed class SalesEndpoints : IEndpoint
     {
         var group = app.MapGroup("/api/sales")
             .WithTags("Sales (LEgFrontNEWBACK)")
-            .RequireAuthorization();
+            .RequireAuthorization("Lectura");
 
         group.MapGet("/customer-transactions", async (
             DateTime? startDate,

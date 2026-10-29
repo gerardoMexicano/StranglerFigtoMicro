@@ -71,7 +71,9 @@ public static class DependencyInjection
 
         services.AddAuthorizationBuilder()
             .AddPolicy("AdminOnly", policy => policy.RequireRole("admin"))
-            .AddPolicy("UsuarioOrAdmin", policy => policy.RequireRole("usuario", "admin"));
+            .AddPolicy("UsuarioOrAdmin", policy => policy.RequireRole("usuario", "admin"))
+            // Consultas: cualquiera de los tres roles del realm (invitado = solo consulta)
+            .AddPolicy("Lectura", policy => policy.RequireRole("usuario", "admin", "invitado"));
 
         services.AddHttpContextAccessor();
         services.AddTransient<IClaimsTransformation, KeycloakClaimsTransformation>();

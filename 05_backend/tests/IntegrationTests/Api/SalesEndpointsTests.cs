@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using Application.Common.Models;
 using Application.Features.Sales.Abstractions;
 using Application.Features.Sales.Dtos;
@@ -61,7 +62,7 @@ public sealed class SalesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
     public async Task GetCustomerTransactions_WithInvalidDateRange_ShouldReturn400BadRequest()
     {
         // Arrange
-        using var client = CreateAuthenticatedClient();
+        using var client = CreateAuthenticatedClient("usuario");
 
         // Act
         var response = await client.GetAsync("/api/sales/customer-transactions?startDate=2016-12-31&endDate=2013-01-01&page=1&pageSize=50");
@@ -79,7 +80,7 @@ public sealed class SalesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
     public async Task GetAllFiveSalesEndpoints_WithAuthenticatedUser_ShouldReturn200OkAndPagedPayload(string url)
     {
         // Arrange
-        using var client = CreateAuthenticatedClient();
+        using var client = CreateAuthenticatedClient("usuario");
 
         // Act
         var response = await client.GetAsync(url);
@@ -94,7 +95,58 @@ public sealed class SalesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Single(json.Items);
     }
 
-    private HttpClient CreateAuthenticatedClient()
+    [Theory]
+    [InlineData("usuario")]
+    [InlineData("admin")]
+    [InlineData("invitado")]
+    public async Task GetSalesEndpoint_WithAnyReadRole_ShouldReturn200Ok(string role)
+    {
+        // Arrange
+        using var client = CreateAuthenticatedClient(role);
+
+        // Act
+        var response = await client.GetAsync("/api/sales/orders?startDate=2013-01-01&endDate=2016-12-31");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/api/sales/customer-transactions?startDate=2013-01-01&endDate=2016-12-31")]
+    [InlineData("/api/sales/invoice-lines?startDate=2013-01-01&endDate=2016-12-31")]
+    [InlineData("/api/sales/invoices?startDate=2013-01-01&endDate=2016-12-31")]
+    [InlineData("/api/sales/order-lines?startDate=2013-01-01&endDate=2016-12-31")]
+    [InlineData("/api/sales/orders?startDate=2013-01-01&endDate=2016-12-31")]
+    public async Task GetSalesEndpoints_WithoutRealmRoles_ShouldReturn403Forbidden(string url)
+    {
+        // Arrange
+        using var client = CreateAuthenticatedClient();
+
+        // Act
+        var response = await client.GetAsync(url);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSalesEndpoint_WithUnknownRole_ShouldReturn403Forbidden()
+    {
+        // Arrange
+        using var client = CreateAuthenticatedClient("otro-rol");
+
+        // Act
+        var response = await client.GetAsync("/api/sales/orders?startDate=2013-01-01&endDate=2016-12-31");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private HttpClient CreateAuthenticatedClient() => CreateAuthenticatedClient([]);
+
+    // Los roles viajan en el encabezado ("TestSalesBearer usuario,admin") y el handler los pone en
+    // realm_access, como los manda Keycloak; KeycloakClaimsTransformation los convierte en roles.
+    private HttpClient CreateAuthenticatedClient(params string[] roles)
     {
         var client = _factory.WithWebHostBuilder(builder =>
         {
@@ -112,7 +164,9 @@ public sealed class SalesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
             });
         }).CreateClient();
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthHandler.SchemeName);
+        client.DefaultRequestHeaders.Authorization = roles.Length == 0
+            ? new AuthenticationHeaderValue(TestAuthHandler.SchemeName)
+            : new AuthenticationHeaderValue(TestAuthHandler.SchemeName, string.Join(',', roles));
         return client;
     }
 
@@ -164,16 +218,17 @@ public sealed class SalesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            if (!Request.Headers.ContainsKey("Authorization"))
+            if (!AuthenticationHeaderValue.TryParse(Request.Headers.Authorization, out var header))
             {
                 return Task.FromResult(AuthenticateResult.NoResult());
             }
 
+            var roles = (header.Parameter ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries);
             var identity = new ClaimsIdentity(
             [
                 new Claim("sub", "kc-user-001"),
                 new Claim("preferred_username", "juan"),
-                new Claim("realm_access", """{"roles":["usuario"]}""")
+                new Claim("realm_access", JsonSerializer.Serialize(new { roles }))
             ], SchemeName);
 
             var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
