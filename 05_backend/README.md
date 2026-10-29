@@ -5,7 +5,7 @@ Microservicio backend construido en **.NET 10 (`net10.0`)** bajo **Clean Archite
 - **Cero acoplamiento a IIS:** Se ejecuta 100% sobre **Kestrel** en un contenedor Linux (`mcr.microsoft.com/dotnet/aspnet:10.0`).
 - **Inmutabilidad entre ambientes:** El código y el `Dockerfile` no cambian entre `development`, `testing` o `production`. Toda la configuración proviene del archivo `.env.<ambiente>` ubicado en `../07_reverse/01_deployment/`.
 - **Identidad delegada en Keycloak:** Actúa como *Resource Server* OAuth 2.0 / OIDC validando tokens JWT emitidos por Keycloak a través de la red interna Docker `backend`.
-- **Acceso a datos con Dapper:** Consultas rápidas y explícitas mediante `IDbConnectionFactory` (`DefaultConnection`) e `IWwiDbConnectionFactory` (`WideWorldImporters`).
+- **Acceso a datos con Dapper:** Consultas rápidas y explícitas mediante `IDbConnectionFactory` (`DefaultConnection`), `IWwiDbConnectionFactory` (`WideWorldImporters`) e `ITaxesDbConnectionFactory` (`TaxesProto`).
 - **CQRS con Abstracciones Propias:** Sin dependencias de terceros de pago (`ICommandHandler`, `IQueryHandler` + `Result<T>`).
 
 ---
@@ -16,9 +16,9 @@ Microservicio backend construido en **.NET 10 (`net10.0`)** bajo **Clean Archite
 05_backend/
 ├── src/
 │   ├── Domain/          # Núcleo empresarial sin dependencias externas (Result<T>, Error, Entities)
-│   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, PagedResult<T>)
-│   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, SalesReadRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
-│   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
+│   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, Taxes/PaginaAntiguaNuevoBackend, PagedResult<T>)
+│   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, TaxesSqlConnectionFactory, SalesReadRepository, TaxesReadRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
+│   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints, TaxesEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
 ├── tests/
 │   ├── UnitTests/       # Pruebas unitarias rápidas de Domain, Application e Infrastructure
 │   └── IntegrationTests/# Pruebas de integración HTTP con WebApplicationFactory<Program>
@@ -62,6 +62,7 @@ Este contenedor **no** almacena secretos ni URLs en `appsettings.json`. En su lu
 | `KC_API_CLIENT_ID` | `Oidc__Audience` | No *(Default: `backend-api`)* | Audiencia (`aud`) requerida en los access tokens emitidos por Keycloak. |
 | `LEGACY_DB_CONNECTION` *(o `BACKEND_DB_CONNECTION`)* | `ConnectionStrings__DefaultConnection` | Sí | Cadena de conexión a SQL Server (`Laboratory`) usada por `SqlConnectionFactory`. |
 | `WWI_DB_CONNECTION` | `ConnectionStrings__WideWorldImporters` | Sí | Cadena de conexión dedicada a `WideWorldImporters` usada por `WwiSqlConnectionFactory` y `SalesReadRepository` (extracción de `/legacy/LEgFrontNEWBACK`). |
+| `TAXES_DB_CONNECTION` | `ConnectionStrings__TaxesProto` | Sí | Cadena de conexión dedicada a `taxes_proto` usada por `TaxesSqlConnectionFactory` y `TaxesReadRepository` (extracción de `/taxes/Home/PaginaAntiguaNuevoBackend`). |
 
 ---
 
@@ -121,6 +122,7 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development down
 | `GET` | `/api/sales/invoices` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Invoices`. |
 | `GET` | `/api/sales/order-lines` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.OrderLines`. |
 | `GET` | `/api/sales/orders` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Orders`. |
+| `GET` | `/api/taxes/consolidated-report` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) del Reporte Masivo Consolidado (`CfdiCore` + `CfdiComplemento` + `NominaResumen` + `NominaMovimiento`) en `taxes_proto`. |
 | `GET` | `/openapi/v1.json` | Anónimo *(Solo `Development`)* | Especificación OpenAPI 3 nativa de .NET 10. |
 
 Políticas de autorización (`Infrastructure/DependencyInjection.cs`), sobre los roles de realm que
@@ -128,14 +130,14 @@ Políticas de autorización (`Infrastructure/DependencyInjection.cs`), sobre los
 
 | Política | Roles | Uso |
 | :--- | :--- | :--- |
-| `Lectura` | `usuario`, `admin`, `invitado` | `/api/sales/*`. Sin token 401; con token sin ninguno de los roles, 403. |
+| `Lectura` | `usuario`, `admin`, `invitado` | `/api/sales/*` y `/api/taxes/*`. Sin token 401; con token sin ninguno de los roles, 403. |
 | `UsuarioOrAdmin` | `usuario`, `admin` | Reservada para operaciones que modifiquen datos. |
 | `AdminOnly` | `admin` | Reservada para administración. |
 
 Desde fuera de Docker los endpoints `/api/*` se alcanzan por nginx + gateway (`https://<host>/api/...`, ruta
-`backend-api-route` de `07_reverse/01_deployment/Gateway`). El primer consumidor es
-`02_webapp_webforms/.../LEgFrontNEWBACK.aspx`, que llama desde el servidor con el token del usuario
-(cliente `legacy-webforms`, que emite `aud: backend-api`).
+`backend-api-route` de `07_reverse/01_deployment/Gateway`). Los consumidores legacy actuales son:
+- `02_webapp_webforms/.../LEgFrontNEWBACK.aspx` → `/api/sales/*` (cliente `legacy-webforms`, `aud: backend-api`).
+- `01_webapp_mvc/.../Home/PaginaAntiguaNuevoBackend` → `/api/taxes/consolidated-report` (cliente `legacy-mvc`, `aud: backend-api`).
 
 ---
 
