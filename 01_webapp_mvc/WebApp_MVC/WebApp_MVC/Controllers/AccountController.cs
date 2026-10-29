@@ -1,3 +1,5 @@
+using System.Configuration;
+using System.Security.Claims;
 using System.Web;
 using System.Web.Mvc;
 using Microsoft.Owin.Security;
@@ -44,6 +46,22 @@ namespace WebApp_MVC.Controllers
             HttpContext.GetOwinContext().Authentication.SignOut(
                 OpenIdConnectAuthenticationDefaults.AuthenticationType,
                 CookieAuthenticationDefaults.AuthenticationType);
+        }
+
+        // GET: Account/FrontchannelLogout?iss=...&sid=...
+        // La llama Keycloak en un iframe cuando la sesión SSO se cierra desde otra app (ver CierreDesdeKeycloak).
+        // Solo borra la cookie de esta app; siempre responde 200 vacío, sin caché.
+        public ActionResult FrontchannelLogout(string iss, string sid)
+        {
+            if (CierreDesdeKeycloak.EsDeEstaSesion(User as ClaimsPrincipal, iss, sid,
+                    ConfigurationManager.AppSettings["oidc:Authority"]))
+            {
+                HttpContext.GetOwinContext().Authentication.SignOut(CookieAuthenticationDefaults.AuthenticationType);
+            }
+
+            Response.Cache.SetCacheability(HttpCacheability.NoCache);
+            Response.Cache.SetNoStore();
+            return new EmptyResult();
         }
     }
 }

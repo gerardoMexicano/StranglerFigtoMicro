@@ -107,8 +107,11 @@
       "serviceAccountsEnabled": false,
       "baseUrl": "${IMPORT_LEGACY_MVC_URL}/",
       "redirectUris": ["${IMPORT_LEGACY_MVC_URL}/signin-oidc", "${IMPORT_LEGACY_MVC_DEV_URL}/signin-oidc"],
+      "frontchannelLogout": true,
       "attributes": {
         "pkce.code.challenge.method": "S256",
+        "frontchannel.logout.url": "${IMPORT_LEGACY_MVC_URL}/Account/FrontchannelLogout",
+        "frontchannel.logout.session.required": "true",
         "post.logout.redirect.uris": "${IMPORT_LEGACY_MVC_URL}/##${IMPORT_LEGACY_MVC_DEV_URL}/"
       }
     },
@@ -127,8 +130,11 @@
       "serviceAccountsEnabled": false,
       "baseUrl": "${IMPORT_LEGACY_WEBFORMS_URL}/",
       "redirectUris": ["${IMPORT_LEGACY_WEBFORMS_URL}/signin-oidc", "${IMPORT_LEGACY_WEBFORMS_DEV_URL}/signin-oidc"],
+      "frontchannelLogout": true,
       "attributes": {
         "pkce.code.challenge.method": "S256",
+        "frontchannel.logout.url": "${IMPORT_LEGACY_WEBFORMS_URL}/FrontchannelLogout.ashx",
+        "frontchannel.logout.session.required": "true",
         "post.logout.redirect.uris": "${IMPORT_LEGACY_WEBFORMS_URL}/##${IMPORT_LEGACY_WEBFORMS_DEV_URL}/"
       },
       "protocolMappers": [
