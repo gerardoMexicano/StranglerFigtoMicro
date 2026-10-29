@@ -59,10 +59,10 @@ describe('Menu', () => {
     });
   });
 
-  it('un usuario sin roles también ve las tres opciones', async () => {
-    auth.user.next({ userName: 'ana', name: 'ana', roles: [] });
+  it('un invitado solo ve LEgFrontNEWBACK', async () => {
+    auth.user.next({ userName: 'ana', name: 'ana', roles: ['invitado'] });
 
-    expect((await pintar()).querySelectorAll('.tarjeta')).toHaveLength(3);
+    expect(Object.keys(enlaces(await pintar()))).toEqual(['Abrir LEgFrontNEWBACK']);
   });
 
   it('"Cerrar sesión" cierra la sesión de Keycloak', async () => {

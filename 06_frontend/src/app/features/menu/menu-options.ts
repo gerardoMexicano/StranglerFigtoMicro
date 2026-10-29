@@ -1,3 +1,4 @@
+import { ROLES_LECTURA, ROLES_LEGACY } from '../../core/auth/roles';
 import { AppConfig } from '../../core/config/app-config';
 
 export interface MenuOption {
@@ -7,7 +8,7 @@ export interface MenuOption {
   url: string;
   /** true: sale de Angular (app legacy en IIS). false: ruta de /newapp. */
   external: boolean;
-  /** Roles de realm que pueden verla. Vacío = todos (así quedan en esta fase). */
+  /** Roles de realm que pueden verla. Vacío = todos. */
   roles: readonly string[];
 }
 
@@ -20,7 +21,7 @@ export function buildMenuOptions(config: AppConfig): MenuOption[] {
       description: 'Aplicación MVC (/taxes) en IIS.',
       url: config.apps.taxesUrl,
       external: true,
-      roles: [],
+      roles: ROLES_LEGACY,
     },
     {
       id: 'legacy',
@@ -28,7 +29,7 @@ export function buildMenuOptions(config: AppConfig): MenuOption[] {
       description: 'Aplicación WebForms (/legacy) en IIS.',
       url: config.apps.legacyUrl,
       external: true,
-      roles: [],
+      roles: ROLES_LEGACY,
     },
     {
       id: 'legfrontnewback',
@@ -36,7 +37,7 @@ export function buildMenuOptions(config: AppConfig): MenuOption[] {
       description: 'Ventas de WideWorldImporters desde el backend .NET 10.',
       url: '/legfrontnewback',
       external: false,
-      roles: [],
+      roles: ROLES_LECTURA,
     },
   ];
 }

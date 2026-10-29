@@ -40,16 +40,25 @@ describe('buildMenuOptions', () => {
     }
   });
 
-  it('en esta fase ninguna opción está restringida por rol', () => {
-    expect(buildMenuOptions(config).every((o) => o.roles.length === 0)).toBe(true);
+  it('las apps legacy son para usuario y admin; LEgFrontNEWBACK también para invitado', () => {
+    expect(Object.fromEntries(buildMenuOptions(config).map((o) => [o.id, o.roles]))).toEqual({
+      taxes: ['usuario', 'admin'],
+      legacy: ['usuario', 'admin'],
+      legfrontnewback: ['usuario', 'admin', 'invitado'],
+    });
   });
 
-  it('un usuario sin roles ve las tres opciones', () => {
-    expect(filterByRole(buildMenuOptions(config), [])).toHaveLength(3);
+  it.each([
+    [['usuario'], ['taxes', 'legacy', 'legfrontnewback']],
+    [['admin'], ['taxes', 'legacy', 'legfrontnewback']],
+    [['invitado'], ['legfrontnewback']],
+    [[], []],
+  ])('con roles %j ve %j', (roles, ids) => {
+    expect(filterByRole(buildMenuOptions(config), roles).map((o) => o.id)).toEqual(ids);
   });
 });
 
-describe('filterByRole (preparado para la división por roles)', () => {
+describe('filterByRole', () => {
   const opcion = (id: MenuOption['id'], roles: string[]): MenuOption => ({
     id,
     title: id,

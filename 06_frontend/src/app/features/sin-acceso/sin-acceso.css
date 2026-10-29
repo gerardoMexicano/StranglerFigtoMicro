@@ -1,0 +1,16 @@
+.aviso {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 12vh 1rem 4rem;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  color: var(--color-primario);
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+}
+
+p {
+  margin: 0 0 2rem;
+  color: var(--color-texto-suave);
+}

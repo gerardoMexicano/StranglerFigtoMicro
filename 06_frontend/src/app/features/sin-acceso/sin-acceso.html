@@ -1,0 +1,13 @@
+<main class="aviso">
+  <h1>No tienes acceso</h1>
+  <p>
+    @if (usuario(); as u) {
+      Iniciaste sesión como <strong>{{ u.name }}</strong>, pero tu usuario no tiene permisos para
+      esta aplicación.
+    } @else {
+      Tu usuario no tiene permisos para esta aplicación.
+    }
+    Pide a un administrador que te asigne un rol o entra con otro usuario.
+  </p>
+  <button type="button" class="boton" (click)="salir()">Cerrar sesión</button>
+</main>
