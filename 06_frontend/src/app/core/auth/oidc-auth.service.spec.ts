@@ -1,9 +1,10 @@
 import { Location } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { LoginResponse, OidcSecurityService } from 'angular-auth-oidc-client';
 import { BehaviorSubject, firstValueFrom, of, throwError } from 'rxjs';
 
-import { OidcAuthService, RETURN_URL_KEY } from './oidc-auth.service';
+import { OidcAuthService, RETURN_URL_KEY, usarCheckSession } from './oidc-auth.service';
 
 function respuesta(isAuthenticated: boolean): LoginResponse {
   return {
@@ -24,8 +25,11 @@ describe('OidcAuthService', () => {
     getAccessToken: ReturnType<typeof vi.fn>;
     forceRefreshSession: ReturnType<typeof vi.fn>;
     getPayloadFromAccessToken: ReturnType<typeof vi.fn>;
+    checkSessionChanged$: BehaviorSubject<boolean>;
+    logoffLocal: ReturnType<typeof vi.fn>;
   };
   let location: { replaceState: ReturnType<typeof vi.fn> };
+  let router: { navigateByUrl: ReturnType<typeof vi.fn> };
   let service: OidcAuthService;
 
   beforeEach(() => {
@@ -44,14 +48,18 @@ describe('OidcAuthService', () => {
       getAccessToken: vi.fn().mockReturnValue(of('')),
       forceRefreshSession: vi.fn().mockReturnValue(of(respuesta(true))),
       getPayloadFromAccessToken: vi.fn().mockReturnValue(of(null)),
+      checkSessionChanged$: new BehaviorSubject(false),
+      logoffLocal: vi.fn(),
     };
     location = { replaceState: vi.fn() };
+    router = { navigateByUrl: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
         OidcAuthService,
         { provide: OidcSecurityService, useValue: oidc },
         { provide: Location, useValue: location },
+        { provide: Router, useValue: router },
       ],
     });
     service = TestBed.inject(OidcAuthService);
@@ -158,6 +166,59 @@ describe('OidcAuthService', () => {
 
       await expect(service.iniciar()).resolves.toBeUndefined();
       expect(location.replaceState).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sesión cerrada en otra app (check session de Keycloak)', () => {
+    async function iniciarConSesion(): Promise<void> {
+      oidc.checkAuth.mockReturnValue(of(respuesta(true)));
+      oidc.isAuthenticated$.next({ isAuthenticated: true, allConfigsAuthenticated: [] });
+      await service.iniciar();
+    }
+
+    it('mientras Keycloak no avise, la sesión sigue', async () => {
+      await iniciarConSesion();
+
+      expect(oidc.logoffLocal).not.toHaveBeenCalled();
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('cuando Keycloak avisa que cambió, borra los tokens de memoria y vuelve a la presentación', async () => {
+      await iniciarConSesion();
+
+      oidc.checkSessionChanged$.next(true);
+
+      expect(oidc.logoffLocal).toHaveBeenCalledOnce();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+      // Solo local: Keycloak ya cerró su sesión, no se vuelve a llamar a su logout
+      expect(oidc.logoff).not.toHaveBeenCalled();
+    });
+
+    it('sin sesión ignora el aviso', async () => {
+      await service.iniciar();
+
+      oidc.checkSessionChanged$.next(true);
+
+      expect(oidc.logoffLocal).not.toHaveBeenCalled();
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('usarCheckSession', () => {
+    it('sí cuando Keycloak está en el mismo origen que la app (laboratorio)', () => {
+      expect(
+        usarCheckSession('https://192.168.50.10/auth/realms/laboratorio', 'https://192.168.50.10'),
+      ).toBe(true);
+    });
+
+    it('no desde ng serve: el iframe de otro origen no recibe la cookie de Keycloak', () => {
+      expect(
+        usarCheckSession('https://192.168.50.10/auth/realms/laboratorio', 'http://localhost:4200'),
+      ).toBe(false);
+    });
+
+    it('no si la authority no es una URL', () => {
+      expect(usarCheckSession('no-es-url', 'https://192.168.50.10')).toBe(false);
     });
   });
 

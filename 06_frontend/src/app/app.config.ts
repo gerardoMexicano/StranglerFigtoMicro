@@ -12,7 +12,7 @@ import { routes } from './app.routes';
 import { apiTokenInterceptor } from './core/auth/api-token.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { MemorySecurityStorage } from './core/auth/memory-security-storage';
-import { OidcAuthService } from './core/auth/oidc-auth.service';
+import { OidcAuthService, usarCheckSession } from './core/auth/oidc-auth.service';
 import { APP_CONFIG, AppConfig } from './core/config/app-config';
 
 /** Providers de la app con el config.json ya leído (main.ts). */
@@ -38,6 +38,8 @@ export function crearAppConfig(config: AppConfig): ApplicationConfig {
           useRefreshToken: true,
           silentRenew: true,
           renewTimeBeforeTokenExpiresInSeconds: 30,
+          // Logout global: se entera cuando la sesión de Keycloak se cierra desde otra app
+          startCheckSession: usarCheckSession(config.oidc.authority, location.origin),
           ignoreNonceAfterRefresh: true,
           // Los claims salen del id_token; no hace falta llamar a /userinfo
           autoUserInfo: false,
