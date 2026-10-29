@@ -7,8 +7,9 @@ del gateway YARP de [`07_reverse/01_deployment`](../07_reverse/01_deployment/REA
 | Ruta | Acceso | Qué hace |
 | :--- | :--- | :--- |
 | `/newapp/` | Pública | Presentación con el botón *Entrar*, que lleva al login de Keycloak. |
-| `/newapp/menu` | Con sesión | Menú hacia BrokenTaxes (`/taxes`, MVC), Legacy WebForms (`/legacy`) y LEgFrontNEWBACK. |
+| `/newapp/menu` | Con sesión | Menú hacia BrokenTaxes (`/taxes`, MVC), Legacy WebForms (`/legacy`), LEgFrontNEWBACK y Usuarios. |
 | `/newapp/legfrontnewback` | Con sesión | Versión Angular de `LEgFrontNEWBACK.aspx`: las 5 tablas de ventas desde `05_backend` (`/api/sales/*`). La página WebForms sigue siendo la oficial. |
+| `/newapp/usuarios` | Con sesión | Checador de Asistencia. **Reemplaza** a `Usuarios.aspx` (migración completa): ubica al usuario en un mapa Leaflet, registra el check-in en `05_backend` (`/api/attendance/check-ins`) y muestra sus últimos registros. `invitado` ve su ubicación pero no registra. |
 
 `/` del sitio redirige (302) a `/newapp/`. Cualquier otra ruta bajo `/newapp/` vuelve a la presentación.
 
@@ -21,7 +22,7 @@ src/
 ├── main.ts                       # Lee config.json y arranca; si falla muestra el error en la página
 ├── app/
 │   ├── app.config.ts             # Router, HttpClient + interceptor, angular-auth-oidc-client
-│   ├── app.routes.ts             # '' pública; menu y legfrontnewback con authGuard
+│   ├── app.routes.ts             # '' pública; menu, legfrontnewback y usuarios con authGuard
 │   ├── core/
 │   │   ├── config/app-config.ts  # Contrato y validación de config.json
 │   │   └── auth/                 # AuthService, OidcAuthService, guards (sesión y rol), roles.ts, interceptor, MemorySecurityStorage
@@ -29,7 +30,8 @@ src/
 │       ├── inicio/               # Presentación
 │       ├── menu/                 # Menú (menu-options.ts: opciones y roles que las ven)
 │       ├── sin-acceso/           # Con sesión pero sin ningún rol de la app
-│       └── legfrontnewback/      # SalesApiService + sales-table (paginado de 50 en el servidor)
+│       ├── legfrontnewback/      # SalesApiService + sales-table (paginado de 50 en el servidor)
+│       └── usuarios/             # Checador de Asistencia: AsistenciaApiService, Geolocalizacion, mapa Leaflet
 public/config.json                # Config para ng serve (en el contenedor se genera al arrancar)
 proxy.conf.json                   # ng serve: /api → https://192.168.50.10
 docker/                           # nginx, plantillas y script que genera config.json y la CSP
@@ -58,10 +60,11 @@ docker/                           # nginx, plantillas y script que genera config
   segundos) avisa a esta app, que borra sus tokens de memoria y vuelve a la presentación. Solo se activa
   con Keycloak en el mismo origen que la app (`usarCheckSession`): desde `ng serve` el iframe no recibe
   la cookie de Keycloak y la sesión acaba al fallar la siguiente renovación del token.
-- **Roles** (`core/auth/roles.ts`, de `realm_access.roles`): `/menu` y `/legfrontnewback` piden
-  `usuario`, `admin` o `invitado` (`roleGuard`, después de `authGuard`); sin ninguno, `/sin-acceso`. En el
-  menú, `/taxes` y `/legacy` son para `usuario` y `admin`; LEgFrontNEWBACK también para `invitado`.
-  Es solo presentación: los datos los protege el backend (política `Lectura` en `/api/sales`).
+- **Roles** (`core/auth/roles.ts`, de `realm_access.roles`): `/menu`, `/legfrontnewback` y `/usuarios`
+  piden `usuario`, `admin` o `invitado` (`roleGuard`, después de `authGuard`); sin ninguno, `/sin-acceso`.
+  En el menú, `/taxes` y `/legacy` son para `usuario` y `admin`; LEgFrontNEWBACK y Usuarios también para
+  `invitado`. En `/usuarios` solo `usuario` y `admin` registran asistencia (`ROLES_ESCRITURA`). Es solo
+  presentación: los datos los protege el backend (políticas `Lectura` y `UsuarioOrAdmin`).
 
 ## 3. Desarrollo local (`ng serve`)
 
@@ -119,7 +122,9 @@ variables de entorno (`docker/40-newapp-config.sh`). Si falta una variable, el c
 
 nginx (puerto 8080, usuario `nginx`): `/healthz` para el healthcheck, `config.json` e `index.html` sin
 caché, JS/CSS con hash en caché inmutable, y cabeceras de seguridad (CSP, `X-Frame-Options: DENY`,
-`nosniff`, `Referrer-Policy`).
+`nosniff`, `Referrer-Policy`, `Permissions-Policy`). Por el mapa de `/usuarios` la CSP deja cargar
+imágenes de `https://tile.openstreetmap.org` y `Permissions-Policy` permite `geolocation=(self)`; la
+geolocalización solo funciona por https.
 
 ```bash
 cd 06_frontend
