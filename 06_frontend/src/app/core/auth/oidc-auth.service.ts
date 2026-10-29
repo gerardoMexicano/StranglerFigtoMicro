@@ -1,7 +1,9 @@
 import { Location } from '@angular/common';
-import { inject, Injectable } from '@angular/core';
+import { DestroyRef, inject, Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
-import { catchError, firstValueFrom, map, Observable, of, switchMap } from 'rxjs';
+import { catchError, filter, firstValueFrom, map, Observable, of, switchMap, take } from 'rxjs';
 
 import { AuthService, AuthUser } from './auth.service';
 
@@ -15,6 +17,8 @@ const DESTINO_POR_DEFECTO = '/menu';
 export class OidcAuthService extends AuthService {
   private readonly oidc = inject(OidcSecurityService);
   private readonly location = inject(Location);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly isAuthenticated$ = this.oidc.isAuthenticated$.pipe(map((r) => r.isAuthenticated));
 
@@ -30,6 +34,8 @@ export class OidcAuthService extends AuthService {
    * el router arranca ahí y no en /newapp/, que es a donde Keycloak siempre regresa.
    */
   async iniciar(): Promise<void> {
+    this.cerrarAlCerrarseEnKeycloak();
+
     const { isAuthenticated } = await firstValueFrom(
       this.oidc.checkAuth().pipe(catchError(() => of({ isAuthenticated: false }))),
     );
@@ -40,6 +46,26 @@ export class OidcAuthService extends AuthService {
     const guardada = sessionStorage.getItem(RETURN_URL_KEY);
     sessionStorage.removeItem(RETURN_URL_KEY);
     this.location.replaceState(esRutaInterna(guardada) ? guardada : DESTINO_POR_DEFECTO);
+  }
+
+  /**
+   * Logout global: si la sesión de Keycloak se cierra desde /taxes o /legacy, el check session
+   * (iframe de Keycloak, ver usarCheckSession) avisa en segundos. Se borran los tokens de memoria
+   * y se vuelve a la presentación; Keycloak ya cerró su sesión, no se llama a su logout.
+   * Sin check session (ng serve) la sesión acaba al fallar la siguiente renovación del token.
+   */
+  private cerrarAlCerrarseEnKeycloak(): void {
+    this.oidc.checkSessionChanged$
+      .pipe(
+        filter(Boolean),
+        switchMap(() => this.isAuthenticated$.pipe(take(1))),
+        filter(Boolean),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.oidc.logoffLocal();
+        void this.router.navigateByUrl('/');
+      });
   }
 
   login(returnUrl: string): void {
@@ -60,6 +86,20 @@ export class OidcAuthService extends AuthService {
       map((respuesta) => respuesta?.isAuthenticated === true),
       catchError(() => of(false)),
     );
+  }
+}
+
+/**
+ * El check session de OIDC carga un iframe de Keycloak que lee su cookie de sesión. Solo sirve con
+ * Keycloak en el mismo origen que la app (el laboratorio: todo detrás de nginx). Desde ng serve
+ * (localhost:4200) el iframe es de otro sitio, el navegador no le manda la cookie y Keycloak
+ * respondería "changed" siempre: la sesión se cerraría sola.
+ */
+export function usarCheckSession(authority: string, origenDeLaApp: string): boolean {
+  try {
+    return new URL(authority).origin === origenDeLaApp;
+  } catch {
+    return false;
   }
 }
 

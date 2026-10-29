@@ -1,0 +1,3 @@
+# Puerto 80 con APP_SCHEME=https: todo a https (ver default.conf.template).
+# Va a APP_PUBLIC_URL y no a $host: el navegador termina en el dominio del certificado y de Keycloak.
+return 301 ${APP_PUBLIC_URL}$request_uri;

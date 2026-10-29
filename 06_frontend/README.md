@@ -24,13 +24,14 @@ src/
 │   ├── app.routes.ts             # '' pública; menu y legfrontnewback con authGuard
 │   ├── core/
 │   │   ├── config/app-config.ts  # Contrato y validación de config.json
-│   │   └── auth/                 # AuthService, OidcAuthService, guard, interceptor, MemorySecurityStorage
+│   │   └── auth/                 # AuthService, OidcAuthService, guards (sesión y rol), roles.ts, interceptor, MemorySecurityStorage
 │   └── features/
 │       ├── inicio/               # Presentación
-│       ├── menu/                 # Menú (menu-options.ts: opciones con roles, hoy vacíos)
+│       ├── menu/                 # Menú (menu-options.ts: opciones y roles que las ven)
+│       ├── sin-acceso/           # Con sesión pero sin ningún rol de la app
 │       └── legfrontnewback/      # SalesApiService + sales-table (paginado de 50 en el servidor)
 public/config.json                # Config para ng serve (en el contenedor se genera al arrancar)
-proxy.conf.json                   # ng serve: /api → http://192.168.50.10
+proxy.conf.json                   # ng serve: /api → https://192.168.50.10
 docker/                           # nginx, plantillas y script que genera config.json y la CSP
 ```
 
@@ -51,6 +52,16 @@ docker/                           # nginx, plantillas y script que genera config
   a la app, Keycloak y la API).
 - SSO con las apps legacy: entrar en `/newapp` abre la sesión de Keycloak, y `/taxes` y `/legacy` entran
   sin contraseña.
+- **Logout global:** *Cerrar sesión* cierra la sesión de Keycloak, que a su vez cierra las de `/taxes` y
+  `/legacy` (front-channel, ver `07_reverse/01_deployment/README.md`). Al revés, si se sale desde
+  `/taxes` o `/legacy`, el *check session* de Keycloak (un iframe que revisa la sesión cada pocos
+  segundos) avisa a esta app, que borra sus tokens de memoria y vuelve a la presentación. Solo se activa
+  con Keycloak en el mismo origen que la app (`usarCheckSession`): desde `ng serve` el iframe no recibe
+  la cookie de Keycloak y la sesión acaba al fallar la siguiente renovación del token.
+- **Roles** (`core/auth/roles.ts`, de `realm_access.roles`): `/menu` y `/legfrontnewback` piden
+  `usuario`, `admin` o `invitado` (`roleGuard`, después de `authGuard`); sin ninguno, `/sin-acceso`. En el
+  menú, `/taxes` y `/legacy` son para `usuario` y `admin`; LEgFrontNEWBACK también para `invitado`.
+  Es solo presentación: los datos los protege el backend (política `Lectura` en `/api/sales`).
 
 ## 3. Desarrollo local (`ng serve`)
 
@@ -62,8 +73,17 @@ pnpm install
 pnpm start          # http://localhost:4200/newapp/
 ```
 
-- `public/config.json` apunta al Keycloak del laboratorio (`http://192.168.50.10/auth/realms/laboratorio`).
-- `proxy.conf.json` manda `/api` al laboratorio: mismo origen que la app, sin CORS.
+- `public/config.json` apunta al Keycloak del laboratorio (`https://192.168.50.10/auth/realms/laboratorio`).
+  `localhost:4200` sigue en http: el navegador lo trata como contexto seguro.
+- `proxy.conf.json` manda `/api` al laboratorio por https (mismo origen que la app, sin CORS) y valida el
+  certificado. Node debe confiar en la CA de mkcert (ver `07_reverse/01_deployment/README.md`, *HTTPS*):
+
+  ```powershell
+  $env:NODE_USE_SYSTEM_CA = "1"   # Node 24: usa el almacén de Windows, donde mkcert -install dejó la CA
+  # o bien: $env:NODE_EXTRA_CA_CERTS = "$(mkcert -CAROOT)\rootCA.pem"
+  ```
+
+  Sin eso falla el proxy de `/api` (`UNABLE_TO_VERIFY_LEAF_SIGNATURE` en la consola de `ng serve`).
 - Para iniciar sesión, `frontend-spa` debe aceptar `http://localhost:4200`. Se agrega y se quita con un
   script que solo corre en development (desde `07_reverse/01_deployment`):
 
@@ -117,16 +137,12 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development up -d --b
 Verificación:
 
 ```bash
-curl -i http://192.168.50.10/                   # 302 → /newapp/
-curl -i http://192.168.50.10/newapp/menu        # 200 (index.html; el guard actúa en el navegador)
-curl -s http://192.168.50.10/newapp/config.json # config generada al arrancar
+curl -i --cacert rootCA.pem https://192.168.50.10/                   # 302 → /newapp/
+curl -i --cacert rootCA.pem https://192.168.50.10/newapp/menu        # 200 (index.html; el guard actúa en el navegador)
+curl -s --cacert rootCA.pem https://192.168.50.10/newapp/config.json # config generada al arrancar
 ```
 
 ## 6. Pendientes
 
-- **Logout global:** *Cerrar sesión* cierra la sesión de Keycloak, pero las sesiones locales de `/taxes`
-  y `/legacy` siguen vivas hasta que expiren.
-- **Roles:** `menu-options.ts` ya admite roles por opción (hoy vacíos) y el usuario trae
-  `realm_access.roles`; falta decidir qué ve cada rol y protegerlo también en las rutas.
 - **LEgFrontNEWBACK:** cuando se valide, decidir si reemplaza a la página WebForms.
 - **Jenkins:** despliegue de esta imagen.

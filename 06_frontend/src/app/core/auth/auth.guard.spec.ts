@@ -5,6 +5,7 @@ import { firstValueFrom, isObservable, Observable } from 'rxjs';
 import { routes } from '../../app.routes';
 import { authGuard } from './auth.guard';
 import { AuthService } from './auth.service';
+import { roleGuard } from './role.guard';
 import { FakeAuthService } from './testing/fake-auth.service';
 
 describe('authGuard', () => {
@@ -49,9 +50,22 @@ describe('rutas de /newapp', () => {
     expect(ruta('')?.canActivate ?? []).not.toContain(authGuard);
   });
 
-  it.each(['menu', 'legfrontnewback'])('"%s" exige sesión', (path) => {
+  it.each(['menu', 'legfrontnewback', 'sin-acceso'])('"%s" exige sesión', (path) => {
     expect(ruta(path)).toBeDefined();
     expect(ruta(path)?.canActivate).toContain(authGuard);
+  });
+
+  it.each(['menu', 'legfrontnewback'])(
+    '"%s" exige además uno de los roles de lectura (usuario, admin, invitado)',
+    (path) => {
+      // authGuard primero: sin sesión gana el login, no /sin-acceso
+      expect(ruta(path)?.canActivate).toEqual([authGuard, roleGuard]);
+      expect(ruta(path)?.data?.['roles']).toEqual(['usuario', 'admin', 'invitado']);
+    },
+  );
+
+  it('"sin-acceso" no pide rol (es a donde llega quien no lo tiene)', () => {
+    expect(ruta('sin-acceso')?.canActivate).not.toContain(roleGuard);
   });
 
   it('una ruta desconocida regresa a la presentación', () => {

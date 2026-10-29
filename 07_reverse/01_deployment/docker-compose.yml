@@ -29,7 +29,9 @@ services:
       - "${NGINX_HTTPS_PORT:-443}:443"
     environment:
       # Solo estas variables se sustituyen en nginx/templates/*.template
+      APP_SCHEME: ${APP_SCHEME}
       APP_DOMAIN: ${APP_DOMAIN}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL}
       KC_HTTP_RELATIVE_PATH: ${KC_HTTP_RELATIVE_PATH}
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro

@@ -1,12 +1,12 @@
 {
   "oidc": {
-    "authority": "http://192.168.50.10/auth/realms/laboratorio",
+    "authority": "https://192.168.50.10/auth/realms/laboratorio",
     "clientId": "frontend-spa",
     "scope": "openid profile email"
   },
   "apiBaseUrl": "/api",
   "apps": {
-    "taxesUrl": "http://192.168.50.10/taxes/Home/Menu",
-    "legacyUrl": "http://192.168.50.10/legacy/Menu"
+    "taxesUrl": "https://192.168.50.10/taxes/Home/Menu",
+    "legacyUrl": "https://192.168.50.10/legacy/Menu"
   }
 }
