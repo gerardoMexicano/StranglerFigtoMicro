@@ -1,4 +1,5 @@
 using Application.Common.Abstractions;
+using Application.Features.Attendance.Abstractions;
 using Application.Features.Sales.Abstractions;
 using Application.Features.Taxes.Abstractions;
 using Infrastructure.Identity;
@@ -42,7 +43,10 @@ public static class DependencyInjection
         });
 
         services.AddScoped<ISalesReadRepository, SalesReadRepository>();
+
         services.AddScoped<ITaxesReadRepository, TaxesReadRepository>();
+
+        services.AddScoped<ICheckInRepository, CheckInRepository>();
 
         // 2. Configuración OIDC de Keycloak (contrato Oidc__* compartido con 07_reverse/01_deployment)
         services.AddOptions<OidcOptions>()

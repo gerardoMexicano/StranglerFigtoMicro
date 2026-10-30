@@ -352,6 +352,9 @@ Roles de realm (los mismos que el plugin de migración trae del legacy):
 | Legacy WebForms (`/legacy`) | ✓ | ✓ | — |
 | LEgFrontNEWBACK (`/newapp` y `/api/sales`) | ✓ | ✓ | ✓ |
 | PaginaAntiguaNuevoBackend (`/api/taxes/consolidated-report`) | ✓ | ✓ | ✓ |
+| Usuarios: ver ubicación e historial (`/newapp/usuarios`, `GET /api/attendance/check-ins/mine`) | ✓ | ✓ | ✓ |
+| Usuarios: registrar asistencia (`POST /api/attendance/check-ins`) | ✓ | ✓ | — |
+
 
 - `/api/sales` y `/api/taxes` exigen la política `Lectura` (cualquiera de los tres): sin rol, 403. Es la que protege los
   datos, también cuando llaman WebForms o MVC (su token trae `realm_access` por el scope `roles`).
