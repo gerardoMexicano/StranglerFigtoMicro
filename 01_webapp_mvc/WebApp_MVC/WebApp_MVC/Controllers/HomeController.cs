@@ -6,8 +6,13 @@ using System.Web.Mvc;
 using System.Xml;
 using System.Data.SqlClient;
 using System.Configuration;
+using System.Globalization;
 using System.IO;
 using System.Diagnostics;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Microsoft.Owin.Security.Cookies;
+using WebApp_MVC.Backend;
 using WebApp_MVC.Models;
 
 namespace WebApp_MVC.Controllers
@@ -15,6 +20,11 @@ namespace WebApp_MVC.Controllers
     [Authorize]
     public class HomeController : Controller
     {
+        // Interruptor del Strangler Fig (Web.config backend:PaginaAntiguaNuevoBackend):
+        // "api" lee de 05_backend (/api/taxes/consolidated-report), "sql" consulta taxes_proto directo como antes
+        private static bool UsarApi =>
+            string.Equals(ConfigurationManager.AppSettings["backend:PaginaAntiguaNuevoBackend"], "api", StringComparison.OrdinalIgnoreCase);
+
         [AllowAnonymous]
         public ActionResult Index()
         {
@@ -26,12 +36,20 @@ namespace WebApp_MVC.Controllers
             return View();
         }
 
-
-
-        public ActionResult PaginaAntiguaNuevoBackend(DateTime? fechaInicio, DateTime? fechaFin)
+        public async Task<ActionResult> PaginaAntiguaNuevoBackend(DateTime? fechaInicio, DateTime? fechaFin, int page = 1, int pageSize = 50)
         {
             var model = new List<Dictionary<string, object>>();
-            
+            bool usarApi = UsarApi;
+
+            ViewBag.UsarApi = usarApi;
+            ViewBag.Origen = usarApi ? "backend nuevo (/api/taxes/consolidated-report)" : "SQL directo (taxes_proto)";
+            ViewBag.Page = Math.Max(1, page);
+            ViewBag.PageSize = pageSize < 1 || pageSize > 500 ? 50 : pageSize;
+            ViewBag.TotalCount = 0;
+            ViewBag.TotalPages = 0;
+            ViewBag.HasPreviousPage = false;
+            ViewBag.HasNextPage = false;
+
             // Si no hay fechas, no cargamos los datos (estado inicial)
             if (!fechaInicio.HasValue && !fechaFin.HasValue)
             {
@@ -42,6 +60,53 @@ namespace WebApp_MVC.Controllers
             // Para mantener los valores en la vista
             ViewBag.FechaInicio = fechaInicio?.ToString("yyyy-MM-dd");
             ViewBag.FechaFin = fechaFin?.ToString("yyyy-MM-dd");
+
+            if (usarApi)
+            {
+                DateTime startD = fechaInicio ?? new DateTime(2020, 1, 1);
+                DateTime endD = fechaFin ?? new DateTime(2026, 12, 31);
+                int paginaActual = (int)ViewBag.Page;
+                int tamanoPagina = (int)ViewBag.PageSize;
+
+                string ruta = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "taxes/consolidated-report?startDate={0:yyyy-MM-dd}&endDate={1:yyyy-MM-dd}&page={2}&pageSize={3}",
+                    startD, endD, paginaActual, tamanoPagina);
+
+                try
+                {
+                    var pagina = await BackendApi.ObtenerAsync<PaginaReporteConsolidado>(HttpContext.GetOwinContext(), ruta);
+                    model = pagina.ItemsComoDiccionarios();
+
+                    ViewBag.Page = pagina.Page;
+                    ViewBag.PageSize = pagina.PageSize;
+                    ViewBag.TotalCount = pagina.TotalCount;
+                    ViewBag.TotalPages = pagina.TotalPages;
+                    ViewBag.HasPreviousPage = pagina.HasPreviousPage;
+                    ViewBag.HasNextPage = pagina.HasNextPage;
+                }
+                catch (BackendSinSesionException)
+                {
+                    // Keycloak ya no renueva el token: se cierra solo la sesión local y se recarga la página
+                    // para que OWIN vuelva a pasar por Keycloak.
+                    HttpContext.GetOwinContext().Authentication.SignOut(CookieAuthenticationDefaults.AuthenticationType);
+                    return Redirect(Request.RawUrl);
+                }
+                catch (BackendApiException ex)
+                {
+                    ViewBag.Error = "No se pudo consultar el backend: " + ex.Message;
+                }
+                catch (HttpRequestException)
+                {
+                    ViewBag.Error = "No se pudo conectar con el backend.";
+                }
+                catch (TaskCanceledException)
+                {
+                    ViewBag.Error = "El backend tardó demasiado en responder.";
+                }
+
+                return View(model);
+            }
 
             string connectionString = ConfigurationManager.ConnectionStrings["ConexionTaxesProto"]?.ConnectionString;
             

@@ -5,6 +5,8 @@ using Application.Features.Attendance.Dtos;
 using Application.Features.Attendance.Queries;
 using Application.Features.Sales.Dtos;
 using Application.Features.Sales.Queries;
+using Application.Features.Taxes.Dtos;
+using Application.Features.Taxes.Queries;
 using Application.Features.Users.GetCurrentUser;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +25,9 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetOrderLinesQuery, PagedResult<OrderLineDto>>, GetOrderLinesQueryHandler>();
         services.AddScoped<IQueryHandler<GetOrdersQuery, PagedResult<OrderDto>>, GetOrdersQueryHandler>();
 
+
+        // Casos de uso extraídos de /taxes/Home/PaginaAntiguaNuevoBackend (taxes_proto)
+        services.AddScoped<IQueryHandler<GetConsolidatedReportQuery, PagedResult<ConsolidatedReportItemDto>>, GetConsolidatedReportQueryHandler>();
         // Checador de Asistencia migrado de /legacy/Usuarios.aspx
         services.AddScoped<ICommandHandler<RegisterCheckInCommand, CheckInDto>, RegisterCheckInCommandHandler>();
         services.AddScoped<IQueryHandler<GetMyCheckInsQuery, IReadOnlyList<CheckInDto>>, GetMyCheckInsQueryHandler>();

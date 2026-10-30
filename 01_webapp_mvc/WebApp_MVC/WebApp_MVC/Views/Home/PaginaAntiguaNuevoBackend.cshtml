@@ -2,12 +2,26 @@
 @{
     ViewBag.Title = "Reporte Masivo Consolidado";
     Layout = "~/Views/Shared/_LayoutProtected.cshtml";
+    bool usarApi = ViewBag.UsarApi == true;
+    int paginaActual = ViewBag.Page != null ? (int)ViewBag.Page : 1;
+    int tamanoPagina = ViewBag.PageSize != null ? (int)ViewBag.PageSize : 50;
+    int totalRegistros = ViewBag.TotalCount != null ? (int)ViewBag.TotalCount : 0;
+    int totalPaginas = ViewBag.TotalPages != null ? (int)ViewBag.TotalPages : 0;
+    bool tieneAnterior = ViewBag.HasPreviousPage == true;
+    bool tieneSiguiente = ViewBag.HasNextPage == true;
 }
 
 <div class="row">
     <div class="col-md-12 mt-4">
         <h2 class="text-center">@ViewBag.Title</h2>
-        <p class="lead text-center">Extracción masiva sincrónica (Antipatrón de Rendimiento para Demostración)</p>
+        <p class="lead text-center">
+            @(usarApi
+                ? "Consulta paginada asíncrona hacia el nuevo backend .NET 10 (Strangler Fig)"
+                : "Extracción masiva sincrónica (Antipatrón de Rendimiento para Demostración)")
+        </p>
+        <p class="text-center text-muted">
+            Origen de datos: <strong>@ViewBag.Origen</strong>
+        </p>
         
         <div class="card bg-light mb-4 mt-4">
             <div class="card-body">
@@ -20,6 +34,11 @@
                         <label for="fechaFin" class="mr-2">Fecha Fin:</label>
                         <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="@ViewBag.FechaFin" required />
                     </div>
+                    @if (usarApi)
+                    {
+                        <input type="hidden" name="page" value="1" />
+                        <input type="hidden" name="pageSize" value="@tamanoPagina" />
+                    }
                     <button type="submit" class="btn btn-primary mb-2">Consultar</button>
                     <a href="@Url.Action("PaginaAntiguaNuevoBackend", "Home")" class="btn btn-secondary mb-2 ml-2">Limpiar</a>
                 </form>
@@ -40,9 +59,18 @@
         }
         else if (Model != null && Model.Count > 0)
         {
-            <div class="alert alert-warning text-center" role="alert">
-                Se han cargado <strong>@Model.Count</strong> registros en memoria bloqueando el hilo principal.
-            </div>
+            if (usarApi)
+            {
+                <div class="alert alert-success text-center" role="alert">
+                    Mostrando <strong>@Model.Count</strong> de <strong>@totalRegistros</strong> registros (Página <strong>@paginaActual</strong> de <strong>@totalPaginas</strong>) desde <code>05_backend</code> sin bloquear el hilo de IIS.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning text-center" role="alert">
+                    Se han cargado <strong>@Model.Count</strong> registros en memoria bloqueando el hilo principal.
+                </div>
+            }
         }
     </div>
 </div>
@@ -112,5 +140,30 @@
                 </tbody>
             </table>
         </div>
+
+        @if (usarApi && totalPaginas > 1)
+        {
+            <nav aria-label="Paginación del reporte consolidado" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(tieneAnterior ? "" : "disabled")">
+                        <a class="page-link"
+                           href="@(tieneAnterior ? Url.Action("PaginaAntiguaNuevoBackend", "Home", new { fechaInicio = ViewBag.FechaInicio, fechaFin = ViewBag.FechaFin, page = paginaActual - 1, pageSize = tamanoPagina }) : "#")">
+                            Anterior
+                        </a>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Página @paginaActual de @totalPaginas (@totalRegistros registros)
+                        </span>
+                    </li>
+                    <li class="page-item @(tieneSiguiente ? "" : "disabled")">
+                        <a class="page-link"
+                           href="@(tieneSiguiente ? Url.Action("PaginaAntiguaNuevoBackend", "Home", new { fechaInicio = ViewBag.FechaInicio, fechaFin = ViewBag.FechaFin, page = paginaActual + 1, pageSize = tamanoPagina }) : "#")">
+                            Siguiente
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        }
     </div>
 </div>

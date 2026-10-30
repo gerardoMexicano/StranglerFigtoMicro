@@ -34,6 +34,7 @@ services:
       # Cadenas de conexión SQL Server (Dapper)
       ConnectionStrings__DefaultConnection: ${BACKEND_DB_CONNECTION:-${LEGACY_DB_CONNECTION:?Define LEGACY_DB_CONNECTION o BACKEND_DB_CONNECTION en el env file}}
       ConnectionStrings__WideWorldImporters: ${WWI_DB_CONNECTION:?Define WWI_DB_CONNECTION en el env file}
+      ConnectionStrings__TaxesProto: ${TAXES_DB_CONNECTION:?Define TAXES_DB_CONNECTION en el env file}
     healthcheck:
       # /dev/tcp es de bash: con CMD-SHELL corre en dash (/bin/sh) y siempre falla
       test:
