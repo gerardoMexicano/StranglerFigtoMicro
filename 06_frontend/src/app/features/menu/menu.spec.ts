@@ -51,12 +51,13 @@ describe('Menu', () => {
     expect((await pintar()).textContent).toContain('Juan Pérez');
   });
 
-  it('las apps legacy abren en su URL de config.json; LEgFrontNEWBACK y Usuarios dentro de /newapp', async () => {
+  it('las apps legacy y Reservación de salas abren por URL; LEgFrontNEWBACK y Usuarios dentro de /newapp', async () => {
     expect(enlaces(await pintar())).toEqual({
       'Abrir BrokenTaxes': 'http://192.168.50.10/taxes/Home/Menu',
       'Abrir Legacy WebForms': 'http://192.168.50.10/legacy/Menu',
       'Abrir LEgFrontNEWBACK': '/legfrontnewback',
       'Abrir Usuarios': '/usuarios',
+      'Abrir Reservación de salas': 'http://192.168.50.10/legacy/AngularPage',
     });
   });
 
@@ -66,6 +67,7 @@ describe('Menu', () => {
     expect(Object.keys(enlaces(await pintar()))).toEqual([
       'Abrir LEgFrontNEWBACK',
       'Abrir Usuarios',
+      'Abrir Reservación de salas',
     ]);
   });
 

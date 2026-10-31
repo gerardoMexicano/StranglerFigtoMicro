@@ -1,0 +1,176 @@
+/* Dentro del marco de WebForms: la paleta de AngularPage.aspx / Menu.aspx (styles.css) */
+h1 {
+  margin: 0.5rem 0;
+  color: var(--color-texto);
+  font-weight: 600;
+}
+
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+  color: var(--color-primario);
+}
+
+.resumen {
+  margin: 0 0 0.5rem;
+  color: var(--color-texto-suave);
+}
+
+.dia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.dia .boton-secundario {
+  padding-inline: 0.9rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: var(--color-primario);
+}
+
+.dia label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+input,
+select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: 400;
+}
+
+select:focus-visible {
+  outline: 3px solid var(--color-acento);
+  outline-offset: 2px;
+}
+
+.aviso-region {
+  min-height: 3rem;
+}
+
+.aviso {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radio);
+  color: #fff;
+  font-weight: 600;
+}
+
+.aviso-exito {
+  background: #4caf50;
+}
+
+.aviso-error {
+  background: var(--color-error);
+}
+
+.formulario,
+.agenda {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra);
+}
+
+.campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.campo-asunto {
+  flex: 1 1 16rem;
+}
+
+.agenda {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 36rem;
+}
+
+th,
+td {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--color-borde);
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  background: var(--color-primario);
+  color: #fff;
+}
+
+thead th:first-child,
+tbody th {
+  width: 5rem;
+}
+
+tbody th {
+  color: var(--color-texto-suave);
+  font-weight: 600;
+}
+
+.detalle {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.reservada {
+  background: #e8ecf5;
+}
+
+.reservada.mia {
+  background: #fde8ec;
+  border-left: 4px solid var(--color-acento);
+}
+
+.boton-elegir,
+.boton-cancelar {
+  padding: 0.15rem 0.5rem;
+  border: 1px dashed var(--color-borde);
+  border-radius: var(--radio);
+  background: transparent;
+  color: var(--color-texto-suave);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.boton-elegir {
+  width: 100%;
+}
+
+.boton-elegir:hover {
+  border-color: var(--color-primario);
+  color: var(--color-primario);
+}
+
+.boton-cancelar {
+  margin-top: 0.35rem;
+  border-style: solid;
+  color: var(--color-error);
+}
