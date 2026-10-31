@@ -15,3 +15,21 @@ public sealed record ConsolidatedReportItemDto(
     string? TipoMovimiento,
     string? Concepto,
     decimal? Importe);
+
+public sealed record SeismicPointDto(
+    double Lat,
+    double Lng,
+    double Mag);
+
+public sealed record SeismicComparisonResultDto(
+    string Engine,
+    int RequestedCount,
+    int ReturnedCount,
+    double MinMagnitude,
+    int Seed,
+    double AverageMagnitude,
+    double MaxMagnitude,
+    long ServerElapsedMs,
+    double MemoryMegabytes,
+    IReadOnlyList<SeismicPointDto> Points);
+

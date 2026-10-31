@@ -17,12 +17,18 @@ Microservicio backend construido en **.NET 10 (`net10.0`)** bajo **Clean Archite
 ├── src/
 │   ├── Domain/          # Núcleo empresarial sin dependencias externas (Result<T>, Error, Entities)
 
+
 │   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, Taxes/PaginaAntiguaNuevoBackend, PagedResult<T>)
 │   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, TaxesSqlConnectionFactory, SalesReadRepository, TaxesReadRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
 │   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints, TaxesEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
 │   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, Attendance/Usuarios, RoomBookings/AngularPage, PagedResult<T>)
 │   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, SalesReadRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
 │   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
+
+│   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, Taxes/PaginaAntiguaNuevoBackend y PaginaAngular, Attendance/Usuarios, PagedResult<T>)
+│   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, TaxesSqlConnectionFactory, SalesReadRepository, TaxesReadRepository, CheckInRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
+│   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints, TaxesEndpoints, AttendanceEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
+
 ├── tests/
 │   ├── UnitTests/       # Pruebas unitarias rápidas de Domain, Application e Infrastructure
 │   └── IntegrationTests/# Pruebas de integración HTTP con WebApplicationFactory<Program>
@@ -127,7 +133,7 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development down
 | `GET` | `/api/sales/order-lines` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.OrderLines`. |
 | `GET` | `/api/sales/orders` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Orders`. |
 | `GET` | `/api/taxes/consolidated-report` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) del Reporte Masivo Consolidado (`CfdiCore` + `CfdiComplemento` + `NominaResumen` + `NominaMovimiento`) en `taxes_proto`. |
-
+| `GET` | `/api/taxes/seismic-geojson` | `Bearer` + política `Lectura` | Generación y filtrado determinista de sismos GeoJSON (`count=5000`, `minMagnitude=1.0`, `seed=2026`) para la comparativa con convivencia de implementaciones en `/taxes/Home/PaginaAngular`. |
 | `POST` | `/api/attendance/check-ins` | `Bearer` + política `UsuarioOrAdmin` | Registra un check-in del Checador de Asistencia (`{ latitude, longitude, accuracyMeters }`) a nombre del `sub` del token. `201` con el registro; `400` si falta un campo o está fuera de rango. |
 | `GET` | `/api/attendance/check-ins/mine` | `Bearer` + política `Lectura` | Últimos check-ins de quien llama (`take=10`, máximo 50), del más reciente al más antiguo. |
 
@@ -143,14 +149,20 @@ Políticas de autorización (`Infrastructure/DependencyInjection.cs`), sobre los
 
 | Política | Roles | Uso |
 | :--- | :--- | :--- |
+
 | `Lectura` | `usuario`, `admin`, `invitado` | `/api/sales/*`, `GET /api/attendance/check-ins/mine` y los `GET` de `/api/rooms`. Sin token 401; con token sin ninguno de los roles, 403. |
 | `UsuarioOrAdmin` | `usuario`, `admin` | Operaciones que modifican datos: `POST /api/attendance/check-ins`, `POST` y `DELETE` de `/api/rooms/bookings` (`invitado` recibe 403). |
+
+| `Lectura` | `usuario`, `admin`, `invitado` | `/api/sales/*`, `/api/taxes/*` y `GET /api/attendance/check-ins/mine`. Sin token 401; con token sin ninguno de los roles, 403. |
+| `UsuarioOrAdmin` | `usuario`, `admin` | Operaciones que modifican datos: `POST /api/attendance/check-ins` (`invitado` recibe 403). |
+
 | `AdminOnly` | `admin` | Reservada para administración. |
 
 Desde fuera de Docker los endpoints `/api/*` se alcanzan por nginx + gateway (`https://<host>/api/...`, ruta
 `backend-api-route` de `07_reverse/01_deployment/Gateway`). Los consumidores legacy actuales son:
 - `02_webapp_webforms/.../LEgFrontNEWBACK.aspx` → `/api/sales/*` (cliente `legacy-webforms`, `aud: backend-api`).
 - `01_webapp_mvc/.../Home/PaginaAntiguaNuevoBackend` → `/api/taxes/consolidated-report` (cliente `legacy-mvc`, `aud: backend-api`).
+- `01_webapp_mvc/.../Home/PaginaAngular` → `/api/taxes/seismic-geojson` en convivencia con el endpoint legado `/taxes/Home/CompararSismos?backend=legacy` (cliente `legacy-mvc`, `aud: backend-api`).
 
 ---
 

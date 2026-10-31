@@ -39,5 +39,27 @@ public sealed class TaxesEndpoints : IEndpoint
         .Produces<PagedResult<ConsolidatedReportItemDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/seismic-geojson", async (
+            int? count,
+            double? minMagnitude,
+            int? seed,
+            IQueryHandler<GetSeismicComparisonQuery, SeismicComparisonResultDto> handler,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new GetSeismicComparisonQuery(
+                Count: count ?? 5000,
+                MinMagnitude: minMagnitude ?? 1.0,
+                Seed: seed ?? 2026);
+
+            var result = await handler.HandleAsync(query, cancellationToken);
+            return result.IsSuccess ? TypedResults.Ok(result.Value) : result.ToProblemDetails();
+        })
+        .WithName("GetSeismicGeoJson")
+        .WithSummary("Generación y procesamiento determinista de puntos sísmicos GeoJSON para la comparativa de rendimiento en /taxes/Home/PaginaAngular.")
+        .Produces<SeismicComparisonResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
     }
 }

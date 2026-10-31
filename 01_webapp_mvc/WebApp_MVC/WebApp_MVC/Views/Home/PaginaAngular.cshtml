@@ -14,8 +14,8 @@
         --text-main: #f8fafc;
         --text-muted: #94a3b8;
         
-        --color-netfw: #e11d48; /* Red for slow/legacy */
-        --color-net10: #10b981; /* Green for fast/modern */
+        --color-netfw: #e11d48; /* Red for legacy */
+        --color-net10: #10b981; /* Green for modern */
     }
 
     body {
@@ -25,7 +25,7 @@
 
     .demo-header {
         text-align: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         padding-bottom: 1rem;
         border-bottom: 1px solid var(--border-color);
     }
@@ -45,7 +45,7 @@
     .panel-title {
         font-weight: 700;
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
         padding-bottom: 0.5rem;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
@@ -53,28 +53,28 @@
     .metrics-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
     }
 
     .metric-box {
         background: rgba(0, 0, 0, 0.2);
         border-radius: 8px;
-        padding: 0.75rem;
+        padding: 0.65rem;
         text-align: center;
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .metric-label {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.2rem;
     }
 
     .metric-value {
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
     }
@@ -85,7 +85,7 @@
     .map-container {
         position: relative;
         flex-grow: 1;
-        min-height: 400px;
+        min-height: 380px;
         background: #1e293b;
         border-radius: 8px;
         overflow: hidden;
@@ -93,7 +93,7 @@
     }
 
     .leaflet-container {
-        background: #0f172a !important; /* Tema oscuro para el fondo del mapa */
+        background: #0f172a !important;
     }
 
     .overlay-status {
@@ -105,9 +105,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(15, 23, 42, 0.8);
+        text-align: center;
+        padding: 1rem;
+        background: rgba(15, 23, 42, 0.85);
         font-weight: bold;
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         z-index: 10;
         transition: opacity 0.3s;
     }
@@ -116,8 +118,8 @@
         background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
         color: white;
         border: none;
-        padding: 12px 32px;
-        font-size: 1.2rem;
+        padding: 10px 24px;
+        font-size: 1.05rem;
         font-weight: 700;
         border-radius: 8px;
         transition: transform 0.2s, box-shadow 0.2s;
@@ -139,7 +141,7 @@
         height: 8px;
         background: rgba(255,255,255,0.1);
         border-radius: 4px;
-        margin-top: 0.5rem;
+        margin-top: 0.4rem;
         overflow: hidden;
     }
 
@@ -147,48 +149,84 @@
         height: 100%;
         transition: width 0.3s ease;
     }
+
+    .control-input {
+        background: rgba(15, 23, 42, 0.9) !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
 </style>
 
 <div class="container-fluid mt-3" id="demo-app">
     <div class="demo-header">
         <h1 style="font-weight: 800; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            Comparativa de Renderizado Espacial
+            Comparativa de Backends: .NET Framework 4.8 vs .NET 10
         </h1>
-        <p style="color: var(--text-muted); font-size: 1.1rem;">
-            10,000 Sismos (GeoJSON) - Pan & Zoom en tiempo real
+        <p style="color: var(--text-muted); font-size: 1.05rem; margin-bottom: 1rem;">
+            Convivencia de implementaciones (Strangler Fig) — Procesamiento y validación de Sismos (GeoJSON)
         </p>
-        <button id="btnRun" class="btn-run mt-2">
-            <i class="bi bi-play-fill"></i> Ejecutar Comparativa
-        </button>
+
+        <!-- Panel de control para seleccionar el backend y los parámetros de prueba -->
+        <div class="glass-panel mb-3" style="padding: 1rem 1.25rem; text-align: left;">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="backendSelect" class="metric-label d-block">Backend a ejecutar</label>
+                    <select id="backendSelect" class="form-select control-input">
+                        <option value="both" selected>Ambos Backends (Comparativa Simultánea)</option>
+                        <option value="legacy">Solo Backend Legado (.NET Framework 4.8)</option>
+                        <option value="net10">Solo Backend Moderno (.NET 10 — /api/taxes/seismic-geojson)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="inputCount" class="metric-label d-block">Cantidad (1 - 10,000)</label>
+                    <input type="number" id="inputCount" class="form-control control-input" value="5000" step="500" />
+                </div>
+                <div class="col-md-2">
+                    <label for="inputMinMag" class="metric-label d-block">Magnitud Mínima (0 - 10)</label>
+                    <input type="number" id="inputMinMag" class="form-control control-input" value="1.0" step="0.5" />
+                </div>
+                <div class="col-md-2">
+                    <label for="inputSeed" class="metric-label d-block">Semilla Determinista</label>
+                    <input type="number" id="inputSeed" class="form-control control-input" value="2026" />
+                </div>
+                <div class="col-md-3 d-grid">
+                    <button id="btnRun" class="btn-run">
+                        Ejecutar Comparativa
+                    </button>
+                </div>
+            </div>
+            <div id="equivalenceBanner" class="mt-3 p-2 rounded text-center" style="display: none; font-size: 0.9rem; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #a7f3d0;">
+            </div>
+        </div>
     </div>
 
     <div class="row g-4">
         <!-- Panel .NET Framework 4.8 -->
         <div class="col-lg-6">
             <div class="glass-panel">
-                <div class="panel-title" style="color: var(--color-netfw); font-size: 1.5rem;">
-                    .NET Framework 4.8 (In-Process)
+                <div class="panel-title" style="color: var(--color-netfw); font-size: 1.4rem;">
+                    Backend Legado: .NET Framework 4.8 (MVC)
                 </div>
-                <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 1rem;">
-                    WebClient Síncrono + Newtonsoft.Json + GDI+ (Software Rendering)
+                <div style="font-size: 0.82rem; color: var(--text-muted); text-align: center; margin-bottom: 0.85rem;">
+                    Endpoint: <code>/taxes/Home/CompararSismos?backend=legacy</code> (IIS + Newtonsoft.Json)
                 </div>
 
                 <div class="metrics-grid">
                     <div class="metric-box">
-                        <div class="metric-label">Descarga + Parseo</div>
+                        <div class="metric-label">Tiempo HTTP / Servidor</div>
                         <div class="metric-value fw-value" id="fw-parse-time">-- ms</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">Primer Render</div>
-                        <div class="metric-value fw-value" id="fw-render-time">-- ms</div>
+                        <div class="metric-label">Estado HTTP &amp; Render</div>
+                        <div class="metric-value fw-value" id="fw-render-time">--</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">FPS (Interactividad)</div>
+                        <div class="metric-label">Sismos / Mag. Promedio</div>
                         <div class="metric-value fw-value" id="fw-fps">--</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">Consumo de Memoria</div>
-                        <div class="metric-value fw-value" id="fw-memory">12 MB</div>
+                        <div class="metric-label">Memoria Asignada</div>
+                        <div class="metric-value fw-value" id="fw-memory">-- MB</div>
                         <div class="memory-bar-container">
                             <div class="memory-bar" style="width: 5%; background: var(--color-netfw);" id="fw-memory-bar"></div>
                         </div>
@@ -196,7 +234,7 @@
                 </div>
 
                 <div class="map-container" id="fw-container">
-                    <div class="overlay-status" id="fw-overlay">Esperando inicio...</div>
+                    <div class="overlay-status" id="fw-overlay">Esperando ejecución...</div>
                     <div id="fw-map" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;"></div>
                 </div>
             </div>
@@ -205,29 +243,29 @@
         <!-- Panel .NET 10 -->
         <div class="col-lg-6">
             <div class="glass-panel">
-                <div class="panel-title" style="color: var(--color-net10); font-size: 1.5rem;">
-                    .NET 10 (Proceso Hijo)
+                <div class="panel-title" style="color: var(--color-net10); font-size: 1.4rem;">
+                    Backend Moderno: .NET 10 (Clean Architecture)
                 </div>
-                <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 1rem;">
-                    System.Text.Json (Span&lt;T&gt;) + SkiaSharp (GPU Acelerado)
+                <div style="font-size: 0.82rem; color: var(--text-muted); text-align: center; margin-bottom: 0.85rem;">
+                    Endpoint: <code>/api/taxes/seismic-geojson</code> (Kestrel Docker + System.Text.Json + JWT)
                 </div>
 
                 <div class="metrics-grid">
                     <div class="metric-box">
-                        <div class="metric-label">Descarga + Parseo</div>
+                        <div class="metric-label">Tiempo HTTP / Servidor</div>
                         <div class="metric-value net10-value" id="net10-parse-time">-- ms</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">Primer Render</div>
-                        <div class="metric-value net10-value" id="net10-render-time">-- ms</div>
+                        <div class="metric-label">Estado HTTP &amp; Render</div>
+                        <div class="metric-value net10-value" id="net10-render-time">--</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">FPS (Interactividad)</div>
+                        <div class="metric-label">Sismos / Mag. Promedio</div>
                         <div class="metric-value net10-value" id="net10-fps">--</div>
                     </div>
                     <div class="metric-box">
-                        <div class="metric-label">Consumo de Memoria</div>
-                        <div class="metric-value net10-value" id="net10-memory">12 MB</div>
+                        <div class="metric-label">Memoria Asignada</div>
+                        <div class="metric-value net10-value" id="net10-memory">-- MB</div>
                         <div class="memory-bar-container">
                             <div class="memory-bar" style="width: 5%; background: var(--color-net10);" id="net10-memory-bar"></div>
                         </div>
@@ -235,7 +273,7 @@
                 </div>
 
                 <div class="map-container" id="net10-container">
-                    <div class="overlay-status" id="net10-overlay">Esperando inicio...</div>
+                    <div class="overlay-status" id="net10-overlay">Esperando ejecución...</div>
                     <div id="net10-map" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1;"></div>
                 </div>
             </div>
@@ -245,28 +283,20 @@
 
 @section Scripts {
     <script>
-        // === MOCK DATA GENERATION ===
-        const TOTAL_POINTS = 5000;
-        const earthquakes = [];
-        for (let i = 0; i < TOTAL_POINTS; i++) {
-            earthquakes.push({
-                lat: 14 + Math.random() * 18, // Latitudes aproximadas de México
-                lng: -118 + Math.random() * 32, // Longitudes aproximadas de México
-                mag: Math.random() * 5 + 1
-            });
-        }
+        const endpointBaseUrl = '@Url.Action("CompararSismos", "Home")';
 
-        // === STATE ===
-        let isRunning = false;
-
-        // === UI ELEMENTS ===
         const btnRun = document.getElementById('btnRun');
-        
-        // Framework UI
+        const backendSelect = document.getElementById('backendSelect');
+        const inputCount = document.getElementById('inputCount');
+        const inputMinMag = document.getElementById('inputMinMag');
+        const inputSeed = document.getElementById('inputSeed');
+        const equivalenceBanner = document.getElementById('equivalenceBanner');
+
+        // Framework 4.8 UI
         const fwOverlay = document.getElementById('fw-overlay');
         const fwParseLbl = document.getElementById('fw-parse-time');
         const fwRenderLbl = document.getElementById('fw-render-time');
-        const fwFpsLbl = document.getElementById('fw-fps');
+        const fwStatsLbl = document.getElementById('fw-fps');
         const fwMemoryLbl = document.getElementById('fw-memory');
         const fwMemoryBar = document.getElementById('fw-memory-bar');
 
@@ -274,131 +304,172 @@
         const net10Overlay = document.getElementById('net10-overlay');
         const net10ParseLbl = document.getElementById('net10-parse-time');
         const net10RenderLbl = document.getElementById('net10-render-time');
-        const net10FpsLbl = document.getElementById('net10-fps');
+        const net10StatsLbl = document.getElementById('net10-fps');
         const net10MemoryLbl = document.getElementById('net10-memory');
         const net10MemoryBar = document.getElementById('net10-memory-bar');
 
-        // === MAP INITIALIZATION (LEAFLET) ===
-        // Usamos preferCanvas para que soporte miles de puntos eficientemente
+        // Inicialización de mapas Leaflet con preferCanvas
         const fwMap = L.map('fw-map', { preferCanvas: true }).setView([23.6345, -102.5528], 5);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO'
         }).addTo(fwMap);
+        const fwLayerGroup = L.layerGroup().addTo(fwMap);
 
         const net10Map = L.map('net10-map', { preferCanvas: true }).setView([23.6345, -102.5528], 5);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO'
         }).addTo(net10Map);
+        const net10LayerGroup = L.layerGroup().addTo(net10Map);
 
-        // Bloqueo intencional del hilo en el mapa FW para simular la lentitud extrema (GDI+)
-        fwMap.on('drag', function() {
-            if(isRunning) {
-                const startBlock = performance.now();
-                // Bloquea por 80ms para causar tirones (stuttering) al arrastrar
-                while(performance.now() - startBlock < 80) { } 
-            }
-        });
-
-        function renderPoints(map, color) {
-            earthquakes.forEach(q => {
-                L.circleMarker([q.lat, q.lng], {
-                    radius: 3,
-                    fillColor: color,
-                    color: color,
-                    weight: 1,
-                    opacity: 0.8,
-                    fillOpacity: 0.6
-                }).addTo(map);
-            });
+        function showOverlay(overlayEl, text, isError) {
+            overlayEl.style.display = 'flex';
+            overlayEl.style.opacity = '1';
+            overlayEl.style.color = isError ? '#fda4af' : '#f8fafc';
+            overlayEl.innerText = text;
         }
 
-        // Fake FPS loops just for the visual effect of the demo since Leaflet handles RAF internally
-        function startFPSLoops() {
-            let fwFrames = 0, net10Frames = 0;
-            let lastTime = performance.now();
-            
-            function loop() {
-                if(!isRunning) return;
-                
-                net10Frames++;
-                
-                // Simulate FW missing frames due to synchronous blocks
-                if(Math.random() > 0.6) { 
-                    fwFrames++;
-                }
-
-                const now = performance.now();
-                if (now - lastTime >= 1000) {
-                    net10FpsLbl.innerText = (net10Frames > 60 ? 60 : net10Frames) + ' fps';
-                    fwFpsLbl.innerText = fwFrames + ' fps';
-                    net10Frames = 0;
-                    fwFrames = 0;
-                    lastTime = now;
-                }
-                requestAnimationFrame(loop);
-            }
-            loop();
+        function hideOverlay(overlayEl) {
+            overlayEl.style.opacity = '0';
+            setTimeout(() => { overlayEl.style.display = 'none'; }, 250);
         }
 
-        // === SIMULATION SEQUENCE ===
+        function renderPointsOnMap(layerGroup, points, color) {
+            const startRender = performance.now();
+            layerGroup.clearLayers();
+            if (Array.isArray(points)) {
+                for (let i = 0; i < points.length; i++) {
+                    const q = points[i];
+                    L.circleMarker([q.lat, q.lng], {
+                        radius: 3,
+                        fillColor: color,
+                        color: color,
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.6
+                    }).addTo(layerGroup);
+                }
+            }
+            return Math.round(performance.now() - startRender);
+        }
+
+        async function invokeBackend(targetBackend, count, minMag, seed, ui) {
+            showOverlay(ui.overlay, 'Consultando backend (' + targetBackend + ')...', false);
+            ui.parseLbl.innerText = '...';
+            ui.renderLbl.innerText = '...';
+            ui.statsLbl.innerText = '...';
+            ui.memoryLbl.innerText = '...';
+
+            const url = `${endpointBaseUrl}?backend=${encodeURIComponent(targetBackend)}&count=${encodeURIComponent(count)}&minMagnitude=${encodeURIComponent(minMag)}&seed=${encodeURIComponent(seed)}`;
+            const startHttp = performance.now();
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                });
+                const httpElapsed = Math.round(performance.now() - startHttp);
+                const payload = await response.json();
+
+                if (!response.ok) {
+                    const detail = payload.detail || payload.title || 'Error en la petición';
+                    ui.parseLbl.innerText = `${httpElapsed} ms`;
+                    ui.renderLbl.innerText = `HTTP ${response.status}`;
+                    ui.statsLbl.innerText = 'Validación';
+                    ui.memoryLbl.innerText = '0 MB';
+                    ui.memoryBar.style.width = '0%';
+                    ui.layerGroup.clearLayers();
+                    showOverlay(ui.overlay, `HTTP ${response.status}: ${detail}`, true);
+                    return { ok: false, status: response.status, detail: detail, httpElapsed: httpElapsed };
+                }
+
+                const renderMs = renderPointsOnMap(ui.layerGroup, payload.points, ui.color);
+                ui.parseLbl.innerText = `${httpElapsed} ms (Srv: ${payload.serverElapsedMs} ms)`;
+                ui.renderLbl.innerText = `HTTP ${response.status} (${renderMs} ms)`;
+                ui.statsLbl.innerText = `${payload.returnedCount} pts (Ø ${payload.averageMagnitude})`;
+                ui.memoryLbl.innerText = `${payload.memoryMegabytes} MB`;
+                const barPct = Math.min(100, Math.max(5, Math.round(payload.memoryMegabytes * 20)));
+                ui.memoryBar.style.width = `${barPct}%`;
+                hideOverlay(ui.overlay);
+
+                return { ok: true, status: response.status, data: payload, httpElapsed: httpElapsed };
+            } catch (err) {
+                ui.renderLbl.innerText = 'Error de red';
+                showOverlay(ui.overlay, 'No se pudo conectar con el servidor.', true);
+                return { ok: false, status: 0, detail: err.message };
+            }
+        }
+
         btnRun.addEventListener('click', async () => {
-            if(isRunning) return;
             btnRun.disabled = true;
-            
-            // Reset metrics
-            fwParseLbl.innerText = '0 ms'; fwRenderLbl.innerText = '0 ms'; fwFpsLbl.innerText = '0 fps';
-            net10ParseLbl.innerText = '0 ms'; net10RenderLbl.innerText = '0 ms'; net10FpsLbl.innerText = '0 fps';
-            
-            // --- .NET 10 SEQUENCE (Ultra Fast) ---
-            net10Overlay.innerText = "Descargando & Parseando (Stream)...";
-            net10MemoryLbl.innerText = "14 MB";
-            net10MemoryBar.style.width = "7%";
-            
-            setTimeout(() => {
-                net10ParseLbl.innerText = "30 ms";
-                net10Overlay.innerText = "Renderizando (SkiaSharp)...";
-                net10MemoryLbl.innerText = "22 MB";
-                net10MemoryBar.style.width = "10%";
-                
-                setTimeout(() => {
-                    net10RenderLbl.innerText = "8 ms";
-                    net10Overlay.style.opacity = "0";
-                    setTimeout(() => net10Overlay.style.display = "none", 300);
-                    
-                    // Launch Net10 Engine
-                    isRunning = true;
-                    startFPSLoops();
-                    renderPoints(net10Map, '#10b981'); // Verde
-                }, 8); // 8ms render mock
-            }, 30); // 30ms parse mock
+            equivalenceBanner.style.display = 'none';
 
-            // --- .NET FRAMEWORK SEQUENCE (Slow & Blocking) ---
-            fwOverlay.innerText = "Descargando string completo...";
-            
-            // Artificial delay to simulate WebClient.DownloadString + JsonConvert blocking
-            setTimeout(() => {
-                fwOverlay.innerText = "Parseando JSON (Newtonsoft)...";
-                fwMemoryLbl.innerText = "210 MB";
-                fwMemoryBar.style.width = "40%";
-                
-                setTimeout(() => {
-                    fwParseLbl.innerText = "2,100 ms";
-                    fwOverlay.innerText = "Renderizando (GDI+)...";
-                    fwMemoryLbl.innerText = "340 MB";
-                    fwMemoryBar.style.width = "80%";
-                    
-                    setTimeout(() => {
-                        fwRenderLbl.innerText = "450 ms";
-                        fwOverlay.style.opacity = "0";
-                        setTimeout(() => fwOverlay.style.display = "none", 300);
-                        
-                        // Launch FW Engine
-                        renderPoints(fwMap, '#e11d48'); // Rojo
-                        btnRun.innerText = "Simulación Activa - Arrastra los mapas";
-                    }, 450); // 450ms render mock
-                }, 1100); // the rest of the 2100ms
-            }, 1000); 
+            const mode = backendSelect.value;
+            const count = inputCount.value;
+            const minMag = inputMinMag.value;
+            const seed = inputSeed.value;
 
+            const fwUi = {
+                overlay: fwOverlay,
+                parseLbl: fwParseLbl,
+                renderLbl: fwRenderLbl,
+                statsLbl: fwStatsLbl,
+                memoryLbl: fwMemoryLbl,
+                memoryBar: fwMemoryBar,
+                layerGroup: fwLayerGroup,
+                color: '#e11d48'
+            };
+
+            const net10Ui = {
+                overlay: net10Overlay,
+                parseLbl: net10ParseLbl,
+                renderLbl: net10RenderLbl,
+                statsLbl: net10StatsLbl,
+                memoryLbl: net10MemoryLbl,
+                memoryBar: net10MemoryBar,
+                layerGroup: net10LayerGroup,
+                color: '#10b981'
+            };
+
+            let fwResult = null;
+            let net10Result = null;
+
+            if (mode === 'legacy') {
+                showOverlay(net10Overlay, 'Omitido (Modo seleccionado: Solo Backend Legado .NET 4.8)', false);
+                fwResult = await invokeBackend('legacy', count, minMag, seed, fwUi);
+            } else if (mode === 'net10') {
+                showOverlay(fwOverlay, 'Omitido (Modo seleccionado: Solo Backend Moderno .NET 10)', false);
+                net10Result = await invokeBackend('net10', count, minMag, seed, net10Ui);
+            } else {
+                const results = await Promise.all([
+                    invokeBackend('legacy', count, minMag, seed, fwUi),
+                    invokeBackend('net10', count, minMag, seed, net10Ui)
+                ]);
+                fwResult = results[0];
+                net10Result = results[1];
+            }
+
+            if (fwResult && net10Result) {
+                equivalenceBanner.style.display = 'block';
+                if (fwResult.ok && net10Result.ok) {
+                    const sameCount = fwResult.data.returnedCount === net10Result.data.returnedCount;
+                    const sameAvg = fwResult.data.averageMagnitude === net10Result.data.averageMagnitude;
+                    const sameMax = fwResult.data.maxMagnitude === net10Result.data.maxMagnitude;
+                    const equivalent = sameCount && sameAvg && sameMax;
+
+                    equivalenceBanner.style.background = equivalent ? 'rgba(16, 185, 129, 0.15)' : 'rgba(225, 29, 72, 0.2)';
+                    equivalenceBanner.style.borderColor = equivalent ? 'rgba(16, 185, 129, 0.4)' : 'rgba(225, 29, 72, 0.5)';
+                    equivalenceBanner.innerHTML = equivalent
+                        ? `<strong>✓ Equivalencia Funcional Verificada (Semilla ${seed}):</strong> Ambos backends procesaron exactamente <strong>${fwResult.data.returnedCount}</strong> sismos con magnitud promedio <strong>${fwResult.data.averageMagnitude}</strong> y máxima <strong>${fwResult.data.maxMagnitude}</strong> (HTTP 200 OK).`
+                        : `<strong>⚠ Diferencia detectada:</strong> Revisa los parámetros de entrada.`;
+                } else if (!fwResult.ok && !net10Result.ok && fwResult.status === net10Result.status) {
+                    equivalenceBanner.style.background = 'rgba(245, 158, 11, 0.15)';
+                    equivalenceBanner.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                    equivalenceBanner.innerHTML = `<strong>✓ Equivalencia de Validación Verificada (HTTP ${fwResult.status}):</strong> Ambos backends rechazaron la entrada inválida con la misma regla de negocio (${fwResult.detail}).`;
+                }
+            }
+
+            btnRun.disabled = false;
         });
     </script>
 }
