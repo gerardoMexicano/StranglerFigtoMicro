@@ -1,5 +1,6 @@
 using Application.Common.Abstractions;
 using Application.Features.Attendance.Abstractions;
+using Application.Features.RoomBookings.Abstractions;
 using Application.Features.Sales.Abstractions;
 using Application.Features.Taxes.Abstractions;
 using Infrastructure.Identity;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Infrastructure;
@@ -47,6 +49,11 @@ public static class DependencyInjection
         services.AddScoped<ITaxesReadRepository, TaxesReadRepository>();
 
         services.AddScoped<ICheckInRepository, CheckInRepository>();
+
+        services.AddScoped<IRoomBookingRepository, RoomBookingRepository>();
+
+        // "Ahora" para las reglas de horario: hora local del contenedor (TZ en docker-compose)
+        services.TryAddSingleton(TimeProvider.System);
 
         // 2. Configuración OIDC de Keycloak (contrato Oidc__* compartido con 07_reverse/01_deployment)
         services.AddOptions<OidcOptions>()

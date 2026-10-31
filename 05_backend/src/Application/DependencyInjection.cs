@@ -3,6 +3,9 @@ using Application.Common.Models;
 using Application.Features.Attendance.Commands;
 using Application.Features.Attendance.Dtos;
 using Application.Features.Attendance.Queries;
+using Application.Features.RoomBookings.Commands;
+using Application.Features.RoomBookings.Dtos;
+using Application.Features.RoomBookings.Queries;
 using Application.Features.Sales.Dtos;
 using Application.Features.Sales.Queries;
 using Application.Features.Taxes.Dtos;
@@ -31,6 +34,12 @@ public static class DependencyInjection
         // Checador de Asistencia migrado de /legacy/Usuarios.aspx
         services.AddScoped<ICommandHandler<RegisterCheckInCommand, CheckInDto>, RegisterCheckInCommandHandler>();
         services.AddScoped<IQueryHandler<GetMyCheckInsQuery, IReadOnlyList<CheckInDto>>, GetMyCheckInsQueryHandler>();
+
+        // Reservación de salas: funcionalidad nueva de /legacy/AngularPage
+        services.AddScoped<IQueryHandler<GetRoomsQuery, IReadOnlyList<RoomDto>>, GetRoomsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetBookingsByDayQuery, IReadOnlyList<BookingDto>>, GetBookingsByDayQueryHandler>();
+        services.AddScoped<ICommandHandler<CreateBookingCommand, BookingDto>, CreateBookingCommandHandler>();
+        services.AddScoped<ICommandHandler<CancelBookingCommand>, CancelBookingCommandHandler>();
 
         return services;
     }
