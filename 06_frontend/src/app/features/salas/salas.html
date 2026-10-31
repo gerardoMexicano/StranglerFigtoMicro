@@ -1,0 +1,168 @@
+<main class="salas">
+  <h1>Reservación de salas</h1>
+  <p class="resumen">
+    Consulta la agenda del día y aparta una sala de 08:00 a 20:00, en bloques de 30 minutos.
+  </p>
+  @if (!puedeReservar()) {
+    <p class="resumen">Con tu rol puedes consultar la agenda, pero no reservar.</p>
+  }
+
+  <div class="dia">
+    <button
+      type="button"
+      class="boton boton-secundario"
+      aria-label="Día anterior"
+      (click)="moverDia(-1)"
+    >
+      ‹
+    </button>
+    <label>
+      Día
+      <input type="date" [value]="fecha()" (change)="cambiarFecha($any($event.target).value)" />
+    </label>
+    <button
+      type="button"
+      class="boton boton-secundario"
+      aria-label="Día siguiente"
+      (click)="moverDia(1)"
+    >
+      ›
+    </button>
+    <button type="button" class="boton boton-texto" (click)="irAHoy()">Hoy</button>
+  </div>
+
+  <div class="aviso-region" aria-live="polite">
+    @if (aviso(); as a) {
+      <p
+        class="aviso"
+        [class]="'aviso-' + a.tipo"
+        [attr.role]="a.tipo === 'error' ? 'alert' : null"
+      >
+        {{ a.texto }}
+      </p>
+    }
+  </div>
+
+  @if (salas.isLoading()) {
+    <p class="resumen">Cargando salas...</p>
+  } @else if (salas.error()) {
+    <p class="error" role="alert">No se pudieron cargar las salas.</p>
+  } @else if (salas.hasValue()) {
+    @if (puedeReservar()) {
+      <form class="formulario" (ngSubmit)="reservar()">
+        <h2>Nueva reservación</h2>
+        @if (iniciosPosibles().length === 0) {
+          <p class="resumen">Este día ya no tiene horarios disponibles.</p>
+        } @else {
+          <div class="campos">
+            <label>
+              Sala
+              <select name="sala" [(ngModel)]="salaId">
+                @for (sala of salas.value(); track sala.id) {
+                  <option [ngValue]="sala.id">{{ sala.name }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Inicio
+              <select name="inicio" [(ngModel)]="inicio">
+                @for (hora of iniciosPosibles(); track hora) {
+                  <option [ngValue]="hora">{{ hora }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Fin
+              <select name="fin" [(ngModel)]="fin">
+                @for (hora of finesPosibles(); track hora) {
+                  <option [ngValue]="hora">{{ hora }}</option>
+                }
+              </select>
+            </label>
+            <label class="campo-asunto">
+              Asunto
+              <input
+                id="asunto"
+                name="asunto"
+                maxlength="120"
+                autocomplete="off"
+                placeholder="Junta de planeación"
+                [(ngModel)]="asunto"
+              />
+            </label>
+            <button type="submit" class="boton" [disabled]="!formularioValido() || guardando()">
+              {{ guardando() ? 'Reservando...' : 'Reservar' }}
+            </button>
+          </div>
+        }
+      </form>
+    }
+
+    <section class="agenda" aria-labelledby="titulo-agenda">
+      <h2 id="titulo-agenda">Agenda del día</h2>
+      @if (reservaciones.error()) {
+        <p class="error" role="alert">No se pudo cargar la agenda.</p>
+      } @else {
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Hora</th>
+              @for (sala of salas.value(); track sala.id) {
+                <th scope="col">
+                  {{ sala.name }}
+                  <span class="detalle">{{ sala.capacity }} personas · {{ sala.location }}</span>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of agenda(); track fila.hora) {
+              <tr>
+                <th scope="row">{{ fila.hora }}</th>
+                @for (celda of fila.celdas; track $index) {
+                  @if (celda; as c) {
+                    @if (c.tipo === 'reservada') {
+                      <td
+                        class="reservada"
+                        [class.mia]="c.reservacion.isMine"
+                        [attr.rowspan]="c.filas"
+                      >
+                        <strong>{{ c.reservacion.subject }}</strong>
+                        <span class="detalle">
+                          {{ horaDe(c.reservacion.startsAt) }}–{{ horaDe(c.reservacion.endsAt) }} ·
+                          {{ c.reservacion.isMine ? 'tú' : c.reservacion.userName }}
+                        </span>
+                        @if (c.reservacion.canCancel) {
+                          <button
+                            type="button"
+                            class="boton-cancelar"
+                            (click)="cancelar(c.reservacion)"
+                          >
+                            Cancelar
+                          </button>
+                        }
+                      </td>
+                    } @else {
+                      <td class="libre">
+                        @if (puedeReservar() && !c.pasada) {
+                          <button
+                            type="button"
+                            class="boton-elegir"
+                            [attr.aria-label]="'Reservar ' + c.sala.name + ' a las ' + c.hora"
+                            (click)="elegir(c)"
+                          >
+                            Libre
+                          </button>
+                        }
+                      </td>
+                    }
+                  }
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</main>

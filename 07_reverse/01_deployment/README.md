@@ -316,6 +316,9 @@ curl -i --cacert rootCA.pem https://192.168.50.10/api/taxes/consolidated-report
 ```
 navegador ─► nginx ─► gateway ─► /           302 → /newapp/
                                  /newapp/*   frontend-newapp:8080 (06_frontend, red backend)
+                                 /legacy/AngularPage*      frontend-newapp:8080 (Reservación de salas)
+                                 /legacy/AngularPage.aspx  302 → /legacy/AngularPage
+                                 /legacy/* (lo demás)      IIS, como siempre
              Angular ─► nginx ─► /auth/*     Keycloak (cliente frontend-spa, PKCE)
                       ─► nginx ─► gateway ─► /api/*  backend-api (Bearer del usuario)
 ```
@@ -324,6 +327,13 @@ navegador ─► nginx ─► gateway ─► /           302 → /newapp/
   `baseHref: /newapp/`. Destino en `FRONTEND_NEWAPP_BASE_URL` (por defecto `http://frontend-newapp:8080`).
 - `/` responde 302 a `/newapp/` (`Gateway/Program.cs`). Es 302 y no 301 para que el navegador no guarde
   la redirección y la entrada se pueda mover. `/taxes`, `/legacy` y `/api` no cambian.
+- Ruta `legacy-angularpage-route` (`/legacy/AngularPage/{**rest}`, `Order: -1`) al mismo cluster
+  `frontend-newapp-cluster`: gana a `legacy-route`, así la página sigue bajo `/legacy` pero la sirve Angular
+  (Reservación de salas, datos en `/api/rooms`). `Program.cs` manda `AngularPage.aspx` a `/legacy/AngularPage`
+  con 302, así el enlace de `Menu.aspx` funciona sin tocar WebForms.
+  - **Rollback:** quitar esa ruta y el `MapMethods` de `AngularPage.aspx`, y redesplegar el gateway: `/legacy/AngularPage`
+    vuelve a IIS, donde `AngularPage.aspx` sigue publicada.
+  - Requiere `sqlserver/db/06_salas.sql` en `Laboratory` y `BACKEND_DB_CONNECTION` con `INSERT` y `DELETE` (p. ej. `app_escritor`).
 - La app es una sola imagen; su `config.json` (Keycloak, API, URLs de las apps legacy) se genera al
   arrancar el contenedor. Detalle en [`06_frontend/README.md`](../../06_frontend/README.md).
 - El contenedor se levanta con su propio compose (`06_frontend`) y comparte el proyecto
@@ -337,6 +347,8 @@ Verificación:
 ```bash
 curl -i --cacert rootCA.pem https://192.168.50.10/              # 302, Location: /newapp/
 curl -i --cacert rootCA.pem https://192.168.50.10/newapp/menu   # 200 (lo sirve frontend-newapp)
+curl -i --cacert rootCA.pem https://192.168.50.10/legacy/AngularPage       # 200, index.html de Angular (<base href="/newapp/">)
+curl -i --cacert rootCA.pem https://192.168.50.10/legacy/AngularPage.aspx  # 302, Location: /legacy/AngularPage
 ```
 
 En el navegador: `/` → presentación → *Entrar* → Keycloak → menú. Desde el menú, `/taxes` y `/legacy`
@@ -354,6 +366,8 @@ Roles de realm (los mismos que el plugin de migración trae del legacy):
 | PaginaAntiguaNuevoBackend (`/api/taxes/consolidated-report`) | ✓ | ✓ | ✓ |
 | Usuarios: ver ubicación e historial (`/newapp/usuarios`, `GET /api/attendance/check-ins/mine`) | ✓ | ✓ | ✓ |
 | Usuarios: registrar asistencia (`POST /api/attendance/check-ins`) | ✓ | ✓ | — |
+| Reservación de salas: ver la agenda (`/legacy/AngularPage`, `GET /api/rooms*`) | ✓ | ✓ | ✓ |
+| Reservación de salas: reservar y cancelar (`POST`/`DELETE /api/rooms/bookings`; `admin` cancela cualquiera) | ✓ | ✓ | — |
 
 
 - `/api/sales` y `/api/taxes` exigen la política `Lectura` (cualquiera de los tres): sin rol, 403. Es la que protege los

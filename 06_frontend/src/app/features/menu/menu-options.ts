@@ -1,12 +1,13 @@
+import { enlacesLegacy } from '../../angular-page/enlaces-legacy';
 import { ROLES_LECTURA, ROLES_LEGACY } from '../../core/auth/roles';
 import { AppConfig } from '../../core/config/app-config';
 
 export interface MenuOption {
-  id: 'taxes' | 'legacy' | 'legfrontnewback' | 'usuarios';
+  id: 'taxes' | 'legacy' | 'legfrontnewback' | 'usuarios' | 'salas';
   title: string;
   description: string;
   url: string;
-  /** true: sale de Angular (app legacy en IIS). false: ruta de /newapp. */
+  /** true: página completa (app legacy en IIS o /legacy/AngularPage). false: ruta de /newapp. */
   external: boolean;
   /** Roles de realm que pueden verla. Vacío = todos. */
   roles: readonly string[];
@@ -45,6 +46,15 @@ export function buildMenuOptions(config: AppConfig): MenuOption[] {
       description: 'Checador de asistencia: registra tu ubicación (antes Usuarios.aspx).',
       url: '/usuarios',
       external: false,
+      roles: ROLES_LECTURA,
+    },
+    {
+      // Es Angular, pero vive en /legacy/AngularPage dentro del marco de WebForms
+      id: 'salas',
+      title: 'Reservación de salas',
+      description: 'Agenda del día y reservación de salas de juntas (/legacy/AngularPage).',
+      url: enlacesLegacy(config.apps.legacyUrl).angularPage,
+      external: true,
       roles: ROLES_LECTURA,
     },
   ];

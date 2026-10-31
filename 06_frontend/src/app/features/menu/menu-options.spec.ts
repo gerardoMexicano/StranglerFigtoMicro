@@ -12,12 +12,13 @@ const config: AppConfig = {
 };
 
 describe('buildMenuOptions', () => {
-  it('arma las cuatro opciones en orden: taxes, legacy, legfrontnewback y usuarios', () => {
+  it('arma las cinco opciones en orden: taxes, legacy, legfrontnewback, usuarios y salas', () => {
     expect(buildMenuOptions(config).map((o) => o.id)).toEqual([
       'taxes',
       'legacy',
       'legfrontnewback',
       'usuarios',
+      'salas',
     ]);
   });
 
@@ -40,6 +41,12 @@ describe('buildMenuOptions', () => {
     expect(usuarios).toMatchObject({ url: '/usuarios', external: false });
   });
 
+  it('salas abre /legacy/AngularPage junto al menú legacy de config.json: es Angular dentro de WebForms', () => {
+    const salas = buildMenuOptions(config)[4];
+
+    expect(salas).toMatchObject({ url: 'http://otro-host/legacy/AngularPage', external: true });
+  });
+
   it('cada opción tiene título y descripción para la tarjeta', () => {
     for (const opcion of buildMenuOptions(config)) {
       expect(opcion.title.trim()).not.toBe('');
@@ -53,13 +60,14 @@ describe('buildMenuOptions', () => {
       legacy: ['usuario', 'admin'],
       legfrontnewback: ['usuario', 'admin', 'invitado'],
       usuarios: ['usuario', 'admin', 'invitado'],
+      salas: ['usuario', 'admin', 'invitado'],
     });
   });
 
   it.each([
-    [['usuario'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios']],
-    [['admin'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios']],
-    [['invitado'], ['legfrontnewback', 'usuarios']],
+    [['usuario'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios', 'salas']],
+    [['admin'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios', 'salas']],
+    [['invitado'], ['legfrontnewback', 'usuarios', 'salas']],
     [[], []],
   ])('con roles %j ve %j', (roles, ids) => {
     expect(filterByRole(buildMenuOptions(config), roles).map((o) => o.id)).toEqual(ids);

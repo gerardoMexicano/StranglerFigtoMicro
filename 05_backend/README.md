@@ -16,9 +16,19 @@ Microservicio backend construido en **.NET 10 (`net10.0`)** bajo **Clean Archite
 05_backend/
 ├── src/
 │   ├── Domain/          # Núcleo empresarial sin dependencias externas (Result<T>, Error, Entities)
+
+
+│   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, Taxes/PaginaAntiguaNuevoBackend, PagedResult<T>)
+│   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, TaxesSqlConnectionFactory, SalesReadRepository, TaxesReadRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
+│   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints, TaxesEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
+│   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, Attendance/Usuarios, RoomBookings/AngularPage, PagedResult<T>)
+│   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, SalesReadRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
+│   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
+
 │   ├── Application/     # Casos de uso CQRS propios (Users, Sales/LEgFrontNEWBACK, Taxes/PaginaAntiguaNuevoBackend y PaginaAngular, Attendance/Usuarios, PagedResult<T>)
 │   ├── Infrastructure/  # Adaptadores: Dapper (SqlConnectionFactory, WwiSqlConnectionFactory, TaxesSqlConnectionFactory, SalesReadRepository, TaxesReadRepository, CheckInRepository), Keycloak JWT/Roles, Token Exchange RFC 8693
 │   └── Api/             # Minimal APIs (SystemEndpoints, SalesEndpoints, TaxesEndpoints, AttendanceEndpoints) + OpenAPI nativo + ProblemDetails RFC 7807 + HealthChecks
+
 ├── tests/
 │   ├── UnitTests/       # Pruebas unitarias rápidas de Domain, Application e Infrastructure
 │   └── IntegrationTests/# Pruebas de integración HTTP con WebApplicationFactory<Program>
@@ -60,7 +70,7 @@ Este contenedor **no** almacena secretos ni URLs en `appsettings.json`. En su lu
 | `KC_HOSTNAME` + `KC_REALM` | `Oidc__Authority` | Sí | Issuer público esperado en el claim `iss` del token JWT (ej. `http://localhost/auth/realms/laboratorio`). |
 | `KC_HTTP_RELATIVE_PATH` + `KC_REALM` | `Oidc__MetadataAddress` | Sí | URL interna en la red Docker `backend` para descargar la configuración OIDC y llaves JWKS de Keycloak (`http://keycloak:8080/auth/realms/laboratorio/.well-known/openid-configuration`). |
 | `KC_API_CLIENT_ID` | `Oidc__Audience` | No *(Default: `backend-api`)* | Audiencia (`aud`) requerida en los access tokens emitidos por Keycloak. |
-| `BACKEND_DB_CONNECTION` *(si falta, `LEGACY_DB_CONNECTION`)* | `ConnectionStrings__DefaultConnection` | Sí | Cadena de conexión a SQL Server (`Laboratory`) usada por `SqlConnectionFactory`. `CheckInRepository` inserta en `dbo.asistencias`: el login necesita `INSERT` (p. ej. `app_escritor`); con `app_lector` el `POST /api/attendance/check-ins` responde 500. |
+| `BACKEND_DB_CONNECTION` *(si falta, `LEGACY_DB_CONNECTION`)* | `ConnectionStrings__DefaultConnection` | Sí | Cadena de conexión a SQL Server (`Laboratory`) usada por `SqlConnectionFactory`. `CheckInRepository` inserta en `dbo.asistencias`: el login necesita `INSERT` (p. ej. `app_escritor`); con `app_lector` el `POST /api/attendance/check-ins` responde 500. `RoomBookingRepository` lee `dbo.salas` y escribe en `dbo.reservaciones` (`sqlserver/db/06_salas.sql`): `SELECT`, `INSERT` y `DELETE`. |
 | `WWI_DB_CONNECTION` | `ConnectionStrings__WideWorldImporters` | Sí | Cadena de conexión dedicada a `WideWorldImporters` usada por `WwiSqlConnectionFactory` y `SalesReadRepository` (extracción de `/legacy/LEgFrontNEWBACK`). |
 | `TAXES_DB_CONNECTION` | `ConnectionStrings__TaxesProto` | Sí | Cadena de conexión dedicada a `taxes_proto` usada por `TaxesSqlConnectionFactory` y `TaxesReadRepository` (extracción de `/taxes/Home/PaginaAntiguaNuevoBackend`). |
 
@@ -126,6 +136,12 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development down
 | `GET` | `/api/taxes/seismic-geojson` | `Bearer` + política `Lectura` | Generación y filtrado determinista de sismos GeoJSON (`count=5000`, `minMagnitude=1.0`, `seed=2026`) para la comparativa con convivencia de implementaciones en `/taxes/Home/PaginaAngular`. |
 | `POST` | `/api/attendance/check-ins` | `Bearer` + política `UsuarioOrAdmin` | Registra un check-in del Checador de Asistencia (`{ latitude, longitude, accuracyMeters }`) a nombre del `sub` del token. `201` con el registro; `400` si falta un campo o está fuera de rango. |
 | `GET` | `/api/attendance/check-ins/mine` | `Bearer` + política `Lectura` | Últimos check-ins de quien llama (`take=10`, máximo 50), del más reciente al más antiguo. |
+
+| `GET` | `/api/rooms` | `Bearer` + política `Lectura` | Salas activas de la Reservación de salas (`/legacy/AngularPage`). |
+| `GET` | `/api/rooms/bookings?date=2026-10-30` | `Bearer` + política `Lectura` | Reservaciones de todas las salas ese día, con `isMine` y `canCancel` calculados con el token. `400` sin `date` válida. |
+| `POST` | `/api/rooms/bookings` | `Bearer` + política `UsuarioOrAdmin` | Reserva una sala (`{ roomId, startsAt, endsAt, subject }`, horas locales sin zona: `2026-10-30T09:00:00`) a nombre del token. Mismo día entre 08:00 y 20:00, en bloques de 30 minutos y no en el pasado (hora de `TZ`): si no, `400`. `404` si la sala no existe; `409` si se empalma con otra (se revisa y se inserta en una sola instrucción con `UPDLOCK, HOLDLOCK`). |
+| `DELETE` | `/api/rooms/bookings/{id}` | `Bearer` + política `UsuarioOrAdmin` | Cancela una reservación propia (`204`); `admin` cancela cualquiera. La de otro usuario: `403`. |
+
 | `GET` | `/openapi/v1.json` | Anónimo *(Solo `Development`)* | Especificación OpenAPI 3 nativa de .NET 10. |
 
 Políticas de autorización (`Infrastructure/DependencyInjection.cs`), sobre los roles de realm que
@@ -133,8 +149,13 @@ Políticas de autorización (`Infrastructure/DependencyInjection.cs`), sobre los
 
 | Política | Roles | Uso |
 | :--- | :--- | :--- |
+
+| `Lectura` | `usuario`, `admin`, `invitado` | `/api/sales/*`, `GET /api/attendance/check-ins/mine` y los `GET` de `/api/rooms`. Sin token 401; con token sin ninguno de los roles, 403. |
+| `UsuarioOrAdmin` | `usuario`, `admin` | Operaciones que modifican datos: `POST /api/attendance/check-ins`, `POST` y `DELETE` de `/api/rooms/bookings` (`invitado` recibe 403). |
+
 | `Lectura` | `usuario`, `admin`, `invitado` | `/api/sales/*`, `/api/taxes/*` y `GET /api/attendance/check-ins/mine`. Sin token 401; con token sin ninguno de los roles, 403. |
 | `UsuarioOrAdmin` | `usuario`, `admin` | Operaciones que modifican datos: `POST /api/attendance/check-ins` (`invitado` recibe 403). |
+
 | `AdminOnly` | `admin` | Reservada para administración. |
 
 Desde fuera de Docker los endpoints `/api/*` se alcanzan por nginx + gateway (`https://<host>/api/...`, ruta
