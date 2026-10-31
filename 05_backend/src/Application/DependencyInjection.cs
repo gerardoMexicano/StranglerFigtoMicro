@@ -25,9 +25,10 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetOrderLinesQuery, PagedResult<OrderLineDto>>, GetOrderLinesQueryHandler>();
         services.AddScoped<IQueryHandler<GetOrdersQuery, PagedResult<OrderDto>>, GetOrdersQueryHandler>();
 
-
-        // Casos de uso extraídos de /taxes/Home/PaginaAntiguaNuevoBackend (taxes_proto)
+        // Casos de uso extraídos de /taxes/Home/PaginaAntiguaNuevoBackend y /taxes/Home/PaginaAngular
         services.AddScoped<IQueryHandler<GetConsolidatedReportQuery, PagedResult<ConsolidatedReportItemDto>>, GetConsolidatedReportQueryHandler>();
+        services.AddScoped<IQueryHandler<GetSeismicComparisonQuery, SeismicComparisonResultDto>, GetSeismicComparisonQueryHandler>();
+
         // Checador de Asistencia migrado de /legacy/Usuarios.aspx
         services.AddScoped<ICommandHandler<RegisterCheckInCommand, CheckInDto>, RegisterCheckInCommandHandler>();
         services.AddScoped<IQueryHandler<GetMyCheckInsQuery, IReadOnlyList<CheckInDto>>, GetMyCheckInsQueryHandler>();

@@ -147,6 +147,53 @@ namespace WebApp_MVC.Backend
         public decimal? Importe { get; set; }
     }
 
+    // SeismicComparisonResultDto del backend (.NET 10) y del controlador legado (.NET Framework 4.8)
+    public class ResultadoComparativaSismica
+    {
+        [JsonProperty("engine")]
+        public string Engine { get; set; }
+
+        [JsonProperty("requestedCount")]
+        public int RequestedCount { get; set; }
+
+        [JsonProperty("returnedCount")]
+        public int ReturnedCount { get; set; }
+
+        [JsonProperty("minMagnitude")]
+        public double MinMagnitude { get; set; }
+
+        [JsonProperty("seed")]
+        public int Seed { get; set; }
+
+        [JsonProperty("averageMagnitude")]
+        public double AverageMagnitude { get; set; }
+
+        [JsonProperty("maxMagnitude")]
+        public double MaxMagnitude { get; set; }
+
+        [JsonProperty("serverElapsedMs")]
+        public long ServerElapsedMs { get; set; }
+
+        [JsonProperty("memoryMegabytes")]
+        public double MemoryMegabytes { get; set; }
+
+        [JsonProperty("points")]
+        public List<PuntoSismico> Points { get; set; } = new List<PuntoSismico>();
+    }
+
+    public class PuntoSismico
+    {
+        [JsonProperty("lat")]
+        public double Lat { get; set; }
+
+        [JsonProperty("lng")]
+        public double Lng { get; set; }
+
+        [JsonProperty("mag")]
+        public double Mag { get; set; }
+    }
+
+
     // No hay token válido o el backend lo rechazó (401): hay que volver a hacer login
     public class BackendSinSesionException : Exception
     {
