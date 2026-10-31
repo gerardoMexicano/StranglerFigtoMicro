@@ -185,6 +185,160 @@ namespace WebApp_MVC.Controllers
             return View();
         }
 
+        // Endpoint para la comparativa real desde /taxes/Home/PaginaAngular.
+        // Permite seleccionar de manera controlada qué backend atiende la operación:
+        // - backend="legacy": procesa directamente en ASP.NET MVC (.NET Framework 4.8)
+        // - backend="net10": enruta la petición autenticada con JWT hacia 05_backend (.NET 10)
+        [HttpGet]
+        public async Task<ActionResult> CompararSismos(string backend = "legacy", int count = 5000, double minMagnitude = 1.0, int seed = 2026)
+        {
+            if (string.Equals(backend, "net10", StringComparison.OrdinalIgnoreCase))
+            {
+                string ruta = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "taxes/seismic-geojson?count={0}&minMagnitude={1}&seed={2}",
+                    count, minMagnitude, seed);
+
+                try
+                {
+                    var resultadoNet10 = await BackendApi.ObtenerAsync<ResultadoComparativaSismica>(HttpContext.GetOwinContext(), ruta);
+                    return Content(Newtonsoft.Json.JsonConvert.SerializeObject(resultadoNet10), "application/json");
+                }
+                catch (BackendSinSesionException)
+                {
+                    HttpContext.GetOwinContext().Authentication.SignOut(CookieAuthenticationDefaults.AuthenticationType);
+                    Response.StatusCode = 401;
+                    Response.TrySkipIisCustomErrors = true;
+                    return Content(
+                        Newtonsoft.Json.JsonConvert.SerializeObject(new { title = "Sesión expirada", detail = "La sesión con el backend venció. Recargue la página." }),
+                        "application/json");
+                }
+                catch (BackendApiException ex)
+                {
+                    Response.StatusCode = (int)ex.Estado;
+                    Response.TrySkipIisCustomErrors = true;
+                    return Content(
+                        Newtonsoft.Json.JsonConvert.SerializeObject(new { title = "Error de validación o autorización en .NET 10", detail = ex.Message }),
+                        "application/json");
+                }
+                catch (HttpRequestException)
+                {
+                    Response.StatusCode = 502;
+                    Response.TrySkipIisCustomErrors = true;
+                    return Content(
+                        Newtonsoft.Json.JsonConvert.SerializeObject(new { title = "Error de conexión", detail = "No se pudo conectar con 05_backend (.NET 10)." }),
+                        "application/json");
+                }
+                catch (TaskCanceledException)
+                {
+                    Response.StatusCode = 504;
+                    Response.TrySkipIisCustomErrors = true;
+                    return Content(
+                        Newtonsoft.Json.JsonConvert.SerializeObject(new { title = "Tiempo de espera agotado", detail = "El backend .NET 10 tardó demasiado en responder." }),
+                        "application/json");
+                }
+            }
+
+            // Implementación original conservada en el backend legado (.NET Framework 4.8)
+            // Reproduce exactamente las mismas reglas de negocio, validaciones y algoritmo determinista.
+            if (count < 1 || count > 10000)
+            {
+                Response.StatusCode = 400;
+                Response.TrySkipIisCustomErrors = true;
+                return Content(
+                    Newtonsoft.Json.JsonConvert.SerializeObject(new
+                    {
+                        title = "Error de validación (.NET Framework 4.8)",
+                        detail = "La cantidad de sismos debe estar entre 1 y 10000.",
+                        errorCode = "Seismic.InvalidCount"
+                    }),
+                    "application/json");
+            }
+
+            if (double.IsNaN(minMagnitude) || minMagnitude < 0.0 || minMagnitude > 10.0)
+            {
+                Response.StatusCode = 400;
+                Response.TrySkipIisCustomErrors = true;
+                return Content(
+                    Newtonsoft.Json.JsonConvert.SerializeObject(new
+                    {
+                        title = "Error de validación (.NET Framework 4.8)",
+                        detail = "La magnitud mínima debe estar entre 0.0 y 10.0.",
+                        errorCode = "Seismic.InvalidMagnitude"
+                    }),
+                    "application/json");
+            }
+
+            var sw = Stopwatch.StartNew();
+            long memBefore = GC.GetTotalMemory(false);
+
+            uint state = unchecked((uint)seed);
+            if (state == 0)
+            {
+                state = 2026u;
+            }
+
+            var points = new List<PuntoSismico>(count);
+            double sumMag = 0;
+            double maxMag = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                double rLat = NextUnitDouble(ref state);
+                double rLng = NextUnitDouble(ref state);
+                double rMag = NextUnitDouble(ref state);
+
+                double lat = Math.Round(14.0 + (rLat * 18.0), 4);
+                double lng = Math.Round(-118.0 + (rLng * 32.0), 4);
+                double mag = Math.Round(1.0 + (rMag * 5.0), 2);
+
+                if (mag >= minMagnitude)
+                {
+                    points.Add(new PuntoSismico { Lat = lat, Lng = lng, Mag = mag });
+                    sumMag += mag;
+                    if (mag > maxMag)
+                    {
+                        maxMag = mag;
+                    }
+                }
+            }
+
+            double avgMag = points.Count > 0 ? Math.Round(sumMag / points.Count, 2) : 0.0;
+            long memAfter = GC.GetTotalMemory(false);
+            long allocatedBytes = Math.Max(1024L, memAfter - memBefore);
+            double memoryMb = Math.Max(0.01, Math.Round(allocatedBytes / (1024.0 * 1024.0), 2));
+
+            var resultadoLegado = new ResultadoComparativaSismica
+            {
+                Engine = ".NET Framework 4.8 (ASP.NET MVC)",
+                RequestedCount = count,
+                ReturnedCount = points.Count,
+                MinMagnitude = minMagnitude,
+                Seed = seed,
+                AverageMagnitude = avgMag,
+                MaxMagnitude = maxMag,
+                ServerElapsedMs = sw.ElapsedMilliseconds,
+                MemoryMegabytes = memoryMb,
+                Points = points
+            };
+
+            string jsonPayload = Newtonsoft.Json.JsonConvert.SerializeObject(resultadoLegado);
+            sw.Stop();
+            resultadoLegado.ServerElapsedMs = sw.ElapsedMilliseconds;
+            jsonPayload = Newtonsoft.Json.JsonConvert.SerializeObject(resultadoLegado);
+
+            return Content(jsonPayload, "application/json");
+        }
+
+        private static double NextUnitDouble(ref uint state)
+        {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            return (state & 0x00FFFFFFu) / (double)0x01000000u;
+        }
+
+
         public ActionResult PaginaPrincipal()
         {
             return RedirectToAction("Menu");

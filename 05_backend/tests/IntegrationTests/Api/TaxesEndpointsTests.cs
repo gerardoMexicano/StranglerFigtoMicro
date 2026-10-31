@@ -146,6 +146,72 @@ public sealed class TaxesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetSeismicGeoJson_WithoutBearerToken_ShouldReturn401Unauthorized()
+    {
+        // Arrange
+        using var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/api/taxes/seismic-geojson?count=100&minMagnitude=1.0&seed=2026");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/api/taxes/seismic-geojson?count=0&minMagnitude=1.0&seed=2026")]
+    [InlineData("/api/taxes/seismic-geojson?count=10001&minMagnitude=1.0&seed=2026")]
+    [InlineData("/api/taxes/seismic-geojson?count=100&minMagnitude=-1.0&seed=2026")]
+    [InlineData("/api/taxes/seismic-geojson?count=100&minMagnitude=10.5&seed=2026")]
+    public async Task GetSeismicGeoJson_WithInvalidParameters_ShouldReturn400BadRequest(string url)
+    {
+        // Arrange
+        using var client = CreateAuthenticatedClient("usuario");
+
+        // Act
+        var response = await client.GetAsync(url);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("usuario")]
+    [InlineData("admin")]
+    [InlineData("invitado")]
+    public async Task GetSeismicGeoJson_WithAnyReadRole_ShouldReturn200OkAndDeterministicPayload(string role)
+    {
+        // Arrange
+        using var client = CreateAuthenticatedClient(role);
+
+        // Act
+        var response = await client.GetAsync("/api/taxes/seismic-geojson?count=50&minMagnitude=2.0&seed=2026");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<SeismicComparisonResultDto>();
+        Assert.NotNull(payload);
+        Assert.Equal(50, payload.RequestedCount);
+        Assert.Equal(2026, payload.Seed);
+        Assert.Equal(payload.ReturnedCount, payload.Points.Count);
+        Assert.All(payload.Points, p => Assert.True(p.Mag >= 2.0));
+    }
+
+    [Fact]
+    public async Task GetSeismicGeoJson_WithoutRealmRoles_ShouldReturn403Forbidden()
+    {
+        // Arrange
+        using var client = CreateAuthenticatedClient();
+
+        // Act
+        var response = await client.GetAsync("/api/taxes/seismic-geojson?count=50&minMagnitude=1.0&seed=2026");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+
     private HttpClient CreateAuthenticatedClient() => CreateAuthenticatedClient([]);
 
     private HttpClient CreateAuthenticatedClient(params string[] roles)

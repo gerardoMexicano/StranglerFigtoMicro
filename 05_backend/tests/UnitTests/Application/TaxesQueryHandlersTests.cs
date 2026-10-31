@@ -122,6 +122,98 @@ public sealed class TaxesQueryHandlersTests
         Assert.Equal("Pagination.InvalidPageSize", result.Error.Code);
     }
 
+    [Fact]
+    public async Task HandleSeismicComparison_WithDefaultParameters_ShouldReturnDeterministicPointsAndMetrics()
+    {
+        // Arrange
+        var handler = new GetSeismicComparisonQueryHandler();
+        var query = new GetSeismicComparisonQuery(Count: 100, MinMagnitude: 1.0, Seed: 2026);
+
+        // Act
+        var firstRun = await handler.HandleAsync(query, CancellationToken.None);
+        var secondRun = await handler.HandleAsync(query, CancellationToken.None);
+
+        // Assert
+        Assert.True(firstRun.IsSuccess);
+        Assert.True(secondRun.IsSuccess);
+        Assert.Equal(".NET 10 (Clean Architecture)", firstRun.Value.Engine);
+        Assert.Equal(100, firstRun.Value.RequestedCount);
+        Assert.Equal(100, firstRun.Value.ReturnedCount);
+        Assert.Equal(100, firstRun.Value.Points.Count);
+        Assert.Equal(2026, firstRun.Value.Seed);
+        Assert.True(firstRun.Value.ServerElapsedMs >= 0);
+        Assert.True(firstRun.Value.MemoryMegabytes > 0);
+        Assert.All(firstRun.Value.Points, point =>
+        {
+            Assert.InRange(point.Lat, 14.0, 32.0);
+            Assert.InRange(point.Lng, -118.0, -86.0);
+            Assert.InRange(point.Mag, 1.0, 6.0);
+        });
+
+        // Determinismo: la misma semilla y entrada deben producir exactamente los mismos puntos y estadísticas
+        Assert.Equal(firstRun.Value.AverageMagnitude, secondRun.Value.AverageMagnitude);
+        Assert.Equal(firstRun.Value.MaxMagnitude, secondRun.Value.MaxMagnitude);
+        Assert.Equal(firstRun.Value.Points, secondRun.Value.Points);
+    }
+
+    [Fact]
+    public async Task HandleSeismicComparison_WithMinMagnitudeFilter_ShouldFilterPointsAndComputeStats()
+    {
+        // Arrange
+        var handler = new GetSeismicComparisonQueryHandler();
+        var query = new GetSeismicComparisonQuery(Count: 500, MinMagnitude: 4.5, Seed: 2026);
+
+        // Act
+        var result = await handler.HandleAsync(query, CancellationToken.None);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(500, result.Value.RequestedCount);
+        Assert.True(result.Value.ReturnedCount > 0 && result.Value.ReturnedCount < 500);
+        Assert.Equal(result.Value.ReturnedCount, result.Value.Points.Count);
+        Assert.All(result.Value.Points, p => Assert.True(p.Mag >= 4.5));
+        Assert.True(result.Value.AverageMagnitude >= 4.5);
+        Assert.True(result.Value.MaxMagnitude >= result.Value.AverageMagnitude);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    [InlineData(10001)]
+    public async Task HandleSeismicComparison_WhenCountIsOutOfRange_ShouldReturnValidationError(int invalidCount)
+    {
+        // Arrange
+        var handler = new GetSeismicComparisonQueryHandler();
+        var query = new GetSeismicComparisonQuery(Count: invalidCount, MinMagnitude: 1.0, Seed: 2026);
+
+        // Act
+        var result = await handler.HandleAsync(query, CancellationToken.None);
+
+        // Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Seismic.InvalidCount", result.Error.Code);
+    }
+
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(10.1)]
+    public async Task HandleSeismicComparison_WhenMinMagnitudeIsOutOfRange_ShouldReturnValidationError(double invalidMagnitude)
+    {
+        // Arrange
+        var handler = new GetSeismicComparisonQueryHandler();
+        var query = new GetSeismicComparisonQuery(Count: 100, MinMagnitude: invalidMagnitude, Seed: 2026);
+
+        // Act
+        var result = await handler.HandleAsync(query, CancellationToken.None);
+
+        // Assert
+        Assert.True(result.IsFailure);
+        Assert.Equal(ErrorType.Validation, result.Error.Type);
+        Assert.Equal("Seismic.InvalidMagnitude", result.Error.Code);
+    }
+
+
     private sealed class FakeTaxesReadRepository : ITaxesReadRepository
     {
         public DateTime LastStartDate { get; private set; }
