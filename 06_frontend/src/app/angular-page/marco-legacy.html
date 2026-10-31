@@ -1,0 +1,17 @@
+<nav class="barra" aria-label="Sistema Laboratorio">
+  <div class="contenedor barra-contenido">
+    <a class="marca" [href]="enlaces.inicio">Sistema Laboratorio</a>
+    <ul class="navegacion">
+      <li><a [href]="enlaces.inicio">Inicio</a></li>
+      <li><a [href]="enlaces.menu">Menú</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="contenedor cuerpo">
+  <router-outlet />
+  <hr />
+  <footer>
+    <p>&copy; {{ anio }} - Sistema Laboratorio</p>
+  </footer>
+</div>

@@ -1,0 +1,66 @@
+<main class="pagina">
+  <a class="boton boton-texto" routerLink="/menu">← Volver al menú</a>
+
+  <h1>Checador de Asistencia</h1>
+  <p class="resumen">Registra tu ubicación actual para confirmar tu asistencia.</p>
+  @if (!puedeRegistrar()) {
+    <p class="resumen">Con tu rol puedes ver tu ubicación, pero la asistencia no se registra.</p>
+  }
+
+  <div class="acciones">
+    <button
+      type="button"
+      class="boton boton-checar"
+      [disabled]="estado() !== 'listo'"
+      (click)="checar()"
+    >
+      {{ textoBoton() }}
+    </button>
+  </div>
+
+  <div class="aviso-region" aria-live="polite">
+    @if (aviso(); as a) {
+      <p
+        class="aviso"
+        [class]="'aviso-' + a.tipo"
+        [attr.role]="a.tipo === 'error' ? 'alert' : null"
+      >
+        {{ a.texto }}
+      </p>
+    }
+  </div>
+
+  <app-mapa-asistencia [ubicacion]="ubicacion()" />
+
+  <section class="historial">
+    <h2>Mis últimos registros</h2>
+    @if (historial.isLoading()) {
+      <p class="resumen">Cargando registros...</p>
+    } @else if (historial.error()) {
+      <p class="error" role="alert">No se pudo cargar el historial.</p>
+    } @else if (historial.hasValue() && historial.value().length > 0) {
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Fecha</th>
+            <th scope="col">Latitud</th>
+            <th scope="col">Longitud</th>
+            <th scope="col">Precisión</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (registro of historial.value(); track registro.id) {
+            <tr>
+              <td>{{ registro.registeredAt | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+              <td>{{ registro.latitude | number: '1.6-6' }}</td>
+              <td>{{ registro.longitude | number: '1.6-6' }}</td>
+              <td>± {{ registro.accuracyMeters | number: '1.0-0' }} m</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="resumen">Todavía no tienes registros.</p>
+    }
+  </section>
+</main>

@@ -12,11 +12,13 @@ const config: AppConfig = {
 };
 
 describe('buildMenuOptions', () => {
-  it('arma las tres opciones en orden: taxes, legacy y legfrontnewback', () => {
+  it('arma las cinco opciones en orden: taxes, legacy, legfrontnewback, usuarios y salas', () => {
     expect(buildMenuOptions(config).map((o) => o.id)).toEqual([
       'taxes',
       'legacy',
       'legfrontnewback',
+      'usuarios',
+      'salas',
     ]);
   });
 
@@ -33,6 +35,18 @@ describe('buildMenuOptions', () => {
     expect(legfrontnewback).toMatchObject({ url: '/legfrontnewback', external: false });
   });
 
+  it('usuarios es una ruta interna de /newapp: ya no abre Usuarios.aspx', () => {
+    const usuarios = buildMenuOptions(config)[3];
+
+    expect(usuarios).toMatchObject({ url: '/usuarios', external: false });
+  });
+
+  it('salas abre /legacy/AngularPage junto al menú legacy de config.json: es Angular dentro de WebForms', () => {
+    const salas = buildMenuOptions(config)[4];
+
+    expect(salas).toMatchObject({ url: 'http://otro-host/legacy/AngularPage', external: true });
+  });
+
   it('cada opción tiene título y descripción para la tarjeta', () => {
     for (const opcion of buildMenuOptions(config)) {
       expect(opcion.title.trim()).not.toBe('');
@@ -40,18 +54,20 @@ describe('buildMenuOptions', () => {
     }
   });
 
-  it('las apps legacy son para usuario y admin; LEgFrontNEWBACK también para invitado', () => {
+  it('las apps legacy son para usuario y admin; las vistas de /newapp también para invitado', () => {
     expect(Object.fromEntries(buildMenuOptions(config).map((o) => [o.id, o.roles]))).toEqual({
       taxes: ['usuario', 'admin'],
       legacy: ['usuario', 'admin'],
       legfrontnewback: ['usuario', 'admin', 'invitado'],
+      usuarios: ['usuario', 'admin', 'invitado'],
+      salas: ['usuario', 'admin', 'invitado'],
     });
   });
 
   it.each([
-    [['usuario'], ['taxes', 'legacy', 'legfrontnewback']],
-    [['admin'], ['taxes', 'legacy', 'legfrontnewback']],
-    [['invitado'], ['legfrontnewback']],
+    [['usuario'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios', 'salas']],
+    [['admin'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios', 'salas']],
+    [['invitado'], ['legfrontnewback', 'usuarios', 'salas']],
     [[], []],
   ])('con roles %j ve %j', (roles, ids) => {
     expect(filterByRole(buildMenuOptions(config), roles).map((o) => o.id)).toEqual(ids);

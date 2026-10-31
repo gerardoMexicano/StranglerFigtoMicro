@@ -1,3 +1,4 @@
+import { APP_BASE_HREF } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
@@ -8,22 +9,28 @@ import {
 import { provideRouter } from '@angular/router';
 import { AbstractSecurityStorage, LogLevel, provideAuth } from 'angular-auth-oidc-client';
 
-import { routes } from './app.routes';
+import { Montaje, MONTAJE_NEWAPP } from './angular-page/montaje';
 import { apiTokenInterceptor } from './core/auth/api-token.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { MemorySecurityStorage } from './core/auth/memory-security-storage';
 import { OidcAuthService, usarCheckSession } from './core/auth/oidc-auth.service';
 import { APP_CONFIG, AppConfig } from './core/config/app-config';
 
-/** Providers de la app con el config.json ya leído (main.ts). */
-export function crearAppConfig(config: AppConfig): ApplicationConfig {
-  // Keycloak siempre regresa a la raíz de la app (/newapp/); OidcAuthService lleva a la ruta pedida
-  const raizDeLaApp = new URL('./', document.baseURI).href;
+/** Providers de la app con el config.json ya leído y el montaje de la URL (main.ts). */
+export function crearAppConfig(
+  config: AppConfig,
+  montaje: Montaje = MONTAJE_NEWAPP,
+): ApplicationConfig {
+  // Keycloak siempre regresa a la raíz del montaje (/newapp/ o /legacy/AngularPage/);
+  // OidcAuthService lleva a la ruta pedida
+  const raizDeLaApp = new URL(montaje.baseHref ?? './', document.baseURI).href;
 
   return {
     providers: [
       provideBrowserGlobalErrorListeners(),
-      provideRouter(routes),
+      provideRouter(montaje.routes),
+      // En /legacy/AngularPage el router no usa el <base href> (/newapp/), que sigue sirviendo los archivos
+      ...(montaje.baseHref ? [{ provide: APP_BASE_HREF, useValue: montaje.baseHref }] : []),
       provideHttpClient(withInterceptors([apiTokenInterceptor])),
       { provide: APP_CONFIG, useValue: config },
       provideAuth({

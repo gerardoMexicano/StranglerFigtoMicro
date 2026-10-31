@@ -113,7 +113,21 @@
         "frontchannel.logout.url": "${IMPORT_LEGACY_MVC_URL}/Account/FrontchannelLogout",
         "frontchannel.logout.session.required": "true",
         "post.logout.redirect.uris": "${IMPORT_LEGACY_MVC_URL}/##${IMPORT_LEGACY_MVC_DEV_URL}/"
-      }
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "${IMPORT_API_CLIENT_ID}",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     },
     {
       "clientId": "legacy-webforms",

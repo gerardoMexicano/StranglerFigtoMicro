@@ -1,0 +1,67 @@
+/* Medidas y colores del navbar-dark bg-dark de Bootstrap 5 que usa Site.Master */
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #fff;
+  color: #212529;
+}
+
+.contenedor {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.barra {
+  background: #212529;
+  padding: 0.5rem 0;
+}
+
+.barra-contenido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+}
+
+.marca {
+  padding: 0.3125rem 0;
+  color: #fff;
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+
+.navegacion {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navegacion a {
+  display: block;
+  padding: 0.5rem;
+  color: rgb(255 255 255 / 55%);
+  text-decoration: none;
+}
+
+.navegacion a:hover,
+.navegacion a:focus-visible {
+  color: rgb(255 255 255 / 75%);
+}
+
+/* .body-content de Site.css */
+.cuerpo {
+  margin-top: 15px;
+}
+
+hr {
+  margin: 1rem 0;
+  border: 0;
+  border-top: 1px solid rgb(0 0 0 / 25%);
+}
+
+footer p {
+  margin: 0 0 1rem;
+}

@@ -79,7 +79,7 @@ Import-Certificate -FilePath .\rootCA.pem -CertStoreLocation Cert:\LocalMachine\
 
 - PCs de los usuarios: sin la CA el navegador marca el sitio como inseguro y `/newapp` no inicia sesión
   (Web Crypto solo existe en contexto seguro).
-- IIS (192.168.50.243): obligatorio. Las apps legacy leen el discovery de Keycloak y WebForms llama a
+- IIS (192.168.50.243): obligatorio. Las apps legacy leen el discovery de Keycloak y WebForms/MVC llaman a
   `/api` por https desde el servidor.
 - Firefox usa su propio almacén: activar `security.enterprise_roots.enabled` o importar la CA ahí.
 - Renovar el certificado: volver a correr `mkcert` y `docker compose ... up -d --no-deps --force-recreate nginx`.
@@ -127,8 +127,8 @@ Los valores `${IMPORT_*}` salen del env file.
   Solo vuelven a `<url>/signin-oidc`, con dos URLs por app: la del gateway (`LEGACY_*_URL`: MVC en `/taxes`,
   WebForms en `/legacy`) y la de IIS Express (`LEGACY_*_DEV_URL`). El SSO entre ellas y con `frontend-spa`
   lo da la sesión de Keycloak.
-  `legacy-webforms` también emite access tokens con `aud: backend-api` (mapper `audience-api`): WebForms
-  llama a `05_backend` por `/api` con el token del usuario.
+  Tanto `legacy-webforms` como `legacy-mvc` emiten access tokens con `aud: backend-api` (mapper `audience-api`)
+  para llamar a `05_backend` por `/api` con el token del usuario.
 - Roles de realm: `usuario`, `admin`, `invitado` (los mismos valores que `usuarios.rol` del legacy).
 - `verifyEmail: true` y SMTP tomado de las variables `SMTP_*`.
 - Proveedor de migración `legacy-migration` (ver abajo).
@@ -140,9 +140,9 @@ Keycloak se construye con `keycloak/Dockerfile`: imagen oficial + plugin
 Para reimportar después de editar el JSON en development:
 `docker compose --env-file .env.development down -v` (borra la BD de Keycloak).
 
-En un realm que ya existe, el mapper `audience-api` de `legacy-webforms` se agrega sin reimportar:
-`./keycloak/scripts/audiencia-legacy-webforms.sh <ambiente>` (usa el admin `KC_BOOTSTRAP_ADMIN_*`;
-si el mapper ya está, no hace nada).
+En un realm que ya existe, el mapper `audience-api` de `legacy-webforms` y `legacy-mvc` se agrega sin reimportar:
+`./keycloak/scripts/audiencia-legacy-webforms.sh <ambiente>` y `./keycloak/scripts/audiencia-legacy-mvc.sh <ambiente>`
+(usan el admin `KC_BOOTSTRAP_ADMIN_*`; si el mapper ya está, no hacen nada).
 
 Para desarrollar `06_frontend` con `ng serve`, `frontend-spa` debe aceptar `http://localhost:4200`
 (redirect, web origin y post logout). No va en el JSON: se agrega y se quita a mano, solo en development
@@ -178,14 +178,10 @@ logout     ─► borra la cookie de la app + end_session de Keycloak (id_token_
 ```
 
 - Pipeline en `Startup.cs` / `Startup.vb`; `Web.config` con `<authentication mode="None" />`.
-- Configuración en `appSettings` del `Web.config`: `oidc:Authority`, `oidc:ClientId`, `oidc:RedirectUri`,
-  `oidc:PostLogoutRedirectUri`, `oidc:RequireHttpsMetadata` y `auth:SesionMinutos` (sesión local deslizante).
-- El secreto del cliente va en `Secrets.config` junto al `Web.config` (ignorado por git; plantilla
-  `Secrets.config.example`). Es el mismo valor que `LEGACY_MVC_CLIENT_SECRET` / `LEGACY_WEBFORMS_CLIENT_SECRET`.
-- `User.Identity.Name` es el username del legacy (claim `preferred_username`).
-- La sesión (claims + access, refresh e id token de Keycloak) vive en la memoria de IIS
-  (`App_Start/SesionEnServidor`); la cookie solo lleva su llave cifrada. Con los tokens dentro ocupaba
-  varios KB por app y, con las de MVC y WebForms juntas, el encabezado Cookie puede rebasar el límite de
+
+- `SaveTokens=true`: el ticket con claims + `access_token`, `refresh_token` e `id_token` se guarda en la
+  caché de IIS (`App_Start/SesionEnServidor`, por `auth:SesionMinutos` deslizante) y la cookie solo lleva
+  su llave cifrada. Así las cookies de las dos apps nunca rebasan el límite de encabezados de petición de
   nginx (8 KB por línea: 400 "Request Header Or Cookie Too Large"). Si IIS recicla el app pool la sesión
   se pierde y el usuario vuelve a entrar por Keycloak sin contraseña.
 - SSO: cada app tiene su cookie; entrar en una deja abierta la sesión de Keycloak y la otra entra sin
@@ -288,11 +284,41 @@ En el navegador, `https://192.168.50.10/legacy/LEgFrontNEWBACK.aspx`: arriba dic
 activo; *Cargar Registros* llena las 5 tablas. Con el rango por defecto (2013-01-01 a 2016-12-31) el
 paginador debe dar los mismos totales con `api` y con `sql`.
 
+### MVC contra el backend nuevo (`Home/PaginaAntiguaNuevoBackend`)
+
+```
+navegador ─► nginx ─► gateway ─► IIS /taxes/Home/PaginaAntiguaNuevoBackend
+                                   │  Controller asíncrono, Bearer <token del usuario>
+                                   ▼
+             nginx ─► gateway ─► backend-api:8080/api/taxes/consolidated-report ─► taxes_proto
+```
+
+- El controlador llama al backend desde el servidor (`Backend/BackendApi.cs`): el token no llega al
+  navegador. El access token sale de `SesionEnServidor` y se renueva con el refresh token
+  (`Backend/TokenDeAcceso.cs`).
+- `Web.config`:
+  - `backend:BaseUrl` — `https://192.168.50.10/api/`
+  - `backend:TimeoutSegundos` — `300`
+  - `backend:PaginaAntiguaNuevoBackend` — `api` (backend nuevo paginado) o `sql` (consulta directa
+    bloqueante original para regresar sin desplegar).
+- Requisitos: el mapper `audience-api` en `legacy-mvc` (`./keycloak/scripts/audiencia-legacy-mvc.sh <ambiente>`)
+  y `TAXES_DB_CONNECTION` en el `.env.<ambiente>` consumido por `05_backend`.
+
+Verificación:
+
+```bash
+# Sin token: 401 del backend (WWW-Authenticate: Bearer)
+curl -i --cacert rootCA.pem https://192.168.50.10/api/taxes/consolidated-report
+```
+
 ## App nueva (`/newapp`, `06_frontend`)
 
 ```
 navegador ─► nginx ─► gateway ─► /           302 → /newapp/
                                  /newapp/*   frontend-newapp:8080 (06_frontend, red backend)
+                                 /legacy/AngularPage*      frontend-newapp:8080 (Reservación de salas)
+                                 /legacy/AngularPage.aspx  302 → /legacy/AngularPage
+                                 /legacy/* (lo demás)      IIS, como siempre
              Angular ─► nginx ─► /auth/*     Keycloak (cliente frontend-spa, PKCE)
                       ─► nginx ─► gateway ─► /api/*  backend-api (Bearer del usuario)
 ```
@@ -301,6 +327,13 @@ navegador ─► nginx ─► gateway ─► /           302 → /newapp/
   `baseHref: /newapp/`. Destino en `FRONTEND_NEWAPP_BASE_URL` (por defecto `http://frontend-newapp:8080`).
 - `/` responde 302 a `/newapp/` (`Gateway/Program.cs`). Es 302 y no 301 para que el navegador no guarde
   la redirección y la entrada se pueda mover. `/taxes`, `/legacy` y `/api` no cambian.
+- Ruta `legacy-angularpage-route` (`/legacy/AngularPage/{**rest}`, `Order: -1`) al mismo cluster
+  `frontend-newapp-cluster`: gana a `legacy-route`, así la página sigue bajo `/legacy` pero la sirve Angular
+  (Reservación de salas, datos en `/api/rooms`). `Program.cs` manda `AngularPage.aspx` a `/legacy/AngularPage`
+  con 302, así el enlace de `Menu.aspx` funciona sin tocar WebForms.
+  - **Rollback:** quitar esa ruta y el `MapMethods` de `AngularPage.aspx`, y redesplegar el gateway: `/legacy/AngularPage`
+    vuelve a IIS, donde `AngularPage.aspx` sigue publicada.
+  - Requiere `sqlserver/db/06_salas.sql` en `Laboratory` y `BACKEND_DB_CONNECTION` con `INSERT` y `DELETE` (p. ej. `app_escritor`).
 - La app es una sola imagen; su `config.json` (Keycloak, API, URLs de las apps legacy) se genera al
   arrancar el contenedor. Detalle en [`06_frontend/README.md`](../../06_frontend/README.md).
 - El contenedor se levanta con su propio compose (`06_frontend`) y comparte el proyecto
@@ -314,6 +347,8 @@ Verificación:
 ```bash
 curl -i --cacert rootCA.pem https://192.168.50.10/              # 302, Location: /newapp/
 curl -i --cacert rootCA.pem https://192.168.50.10/newapp/menu   # 200 (lo sirve frontend-newapp)
+curl -i --cacert rootCA.pem https://192.168.50.10/legacy/AngularPage       # 200, index.html de Angular (<base href="/newapp/">)
+curl -i --cacert rootCA.pem https://192.168.50.10/legacy/AngularPage.aspx  # 302, Location: /legacy/AngularPage
 ```
 
 En el navegador: `/` → presentación → *Entrar* → Keycloak → menú. Desde el menú, `/taxes` y `/legacy`
@@ -328,9 +363,15 @@ Roles de realm (los mismos que el plugin de migración trae del legacy):
 | BrokenTaxes (`/taxes`) | ✓ | ✓ | — |
 | Legacy WebForms (`/legacy`) | ✓ | ✓ | — |
 | LEgFrontNEWBACK (`/newapp` y `/api/sales`) | ✓ | ✓ | ✓ |
+| PaginaAntiguaNuevoBackend (`/api/taxes/consolidated-report`) | ✓ | ✓ | ✓ |
+| Usuarios: ver ubicación e historial (`/newapp/usuarios`, `GET /api/attendance/check-ins/mine`) | ✓ | ✓ | ✓ |
+| Usuarios: registrar asistencia (`POST /api/attendance/check-ins`) | ✓ | ✓ | — |
+| Reservación de salas: ver la agenda (`/legacy/AngularPage`, `GET /api/rooms*`) | ✓ | ✓ | ✓ |
+| Reservación de salas: reservar y cancelar (`POST`/`DELETE /api/rooms/bookings`; `admin` cancela cualquiera) | ✓ | ✓ | — |
 
-- `/api/sales` exige la política `Lectura` (cualquiera de los tres): sin rol, 403. Es la que protege los
-  datos, también cuando llama WebForms (su token trae `realm_access` por el scope `roles`).
+
+- `/api/sales` y `/api/taxes` exigen la política `Lectura` (cualquiera de los tres): sin rol, 403. Es la que protege los
+  datos, también cuando llaman WebForms o MVC (su token trae `realm_access` por el scope `roles`).
 - En `/newapp`, el menú y las rutas siguen la tabla; sin ninguno de los tres roles se ve `/sin-acceso`.
 - Ocultar `/taxes` y `/legacy` en el menú no los protege: los permisos dentro de las apps legacy siguen
   siendo los suyos.

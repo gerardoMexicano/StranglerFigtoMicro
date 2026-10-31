@@ -12,6 +12,24 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // Falta un parámetro obligatorio (?date=) o el JSON no se puede leer: es culpa de la
+        // petición, no del servidor. Minimal APIs lo lanza como BadHttpRequestException (400).
+        if (exception is BadHttpRequestException badRequest)
+        {
+            _logger.LogInformation("Solicitud inválida: {Message}", badRequest.Message);
+
+            httpContext.Response.StatusCode = badRequest.StatusCode;
+            await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = badRequest.StatusCode,
+                Title = "Solicitud inválida",
+                Detail = badRequest.Message,
+                Instance = httpContext.Request.Path
+            }, cancellationToken);
+
+            return true;
+        }
+
         _logger.LogError(exception, "Excepción no controlada: {Message}", exception.Message);
 
         var problemDetails = new ProblemDetails
