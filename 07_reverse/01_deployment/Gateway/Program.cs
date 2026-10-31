@@ -28,6 +28,13 @@ app.UseForwardedHeaders();
 // y la entrada se puede mover sin que los usuarios queden atados al destino viejo.
 app.MapMethods("/", [HttpMethods.Get, HttpMethods.Head], () => Results.Redirect("/newapp/"));
 
+// /legacy/AngularPage es Angular (06_frontend, Reservación de salas) aunque siga bajo /legacy:
+// la ruta legacy-angularpage-route de appsettings.json la manda al frontend nuevo antes que a IIS.
+// Los enlaces viejos a AngularPage.aspx (Menu.aspx) llegan a la misma pantalla sin tocar WebForms.
+// Rollback: quitar esa ruta y esta línea; AngularPage.aspx sigue publicada en IIS.
+app.MapMethods("/legacy/AngularPage.aspx", [HttpMethods.Get, HttpMethods.Head],
+    () => Results.Redirect("/legacy/AngularPage"));
+
 app.MapReverseProxy();
 
 app.Run();
