@@ -11,7 +11,25 @@ del gateway YARP de [`07_reverse/01_deployment`](../07_reverse/01_deployment/REA
 | `/newapp/legfrontnewback` | Con sesión | Versión Angular de `LEgFrontNEWBACK.aspx`: las 5 tablas de ventas desde `05_backend` (`/api/sales/*`). La página WebForms sigue siendo la oficial. |
 | `/newapp/usuarios` | Con sesión | Checador de Asistencia. **Reemplaza** a `Usuarios.aspx` (migración completa): ubica al usuario en un mapa Leaflet, registra el check-in en `05_backend` (`/api/attendance/check-ins`) y muestra sus últimos registros. `invitado` ve su ubicación pero no registra. |
 
+| `/legacy/AngularPage` | Con sesión | Reservación de salas (funcionalidad nueva). Es **esta misma app**, pero el gateway la sirve en lugar de `AngularPage.aspx` dentro de un marco igual al `Site.Master` de WebForms: para el usuario sigue siendo una página de `/legacy`. Agenda del día por sala y reservación en bloques de 30 minutos contra `05_backend` (`/api/rooms`). `invitado` consulta pero no reserva. |
+
 `/` del sitio redirige (302) a `/newapp/`. Cualquier otra ruta bajo `/newapp/` vuelve a la presentación.
+
+### Montaje en `/legacy/AngularPage`
+
+Un solo build y una sola imagen. `main.ts` mira la URL (`montajePara` en `app/angular-page/montaje.ts`):
+
+- Bajo `/legacy/AngularPage` (sin distinguir mayúsculas) arranca con `APP_BASE_HREF=/legacy/AngularPage/` y las
+  rutas de `angular-page.routes.ts`: la raíz es la Reservación de salas dentro de `MarcoLegacy` (barra
+  *Sistema Laboratorio*, *Inicio*, *Menú* y pie, con CSS propio: no carga Bootstrap ni nada de IIS).
+- El `<base href>` sigue siendo `/newapp/`: js, css y `config.json` se piden ahí. nginx devuelve el mismo
+  `index.html` para `/legacy/AngularPage*` (`docker/default.conf`).
+- Keycloak regresa a `/legacy/AngularPage/`, que ya cubre `${APP_PUBLIC_URL}/*` de `frontend-spa`. Con la sesión
+  SSO de WebForms el salto a `/auth` no pide contraseña.
+- Los enlaces de WebForms (*Inicio*, *Menú*, la tarjeta del menú de `/newapp`) salen de `apps.legacyUrl`: no hay
+  llave nueva en `config.json`.
+- El resto de `/newapp` no cambia. La ruta del gateway y el rollback están en
+  [`07_reverse/01_deployment/README.md`](../07_reverse/01_deployment/README.md#app-nueva-newapp-06_frontend).
 
 ---
 
@@ -21,8 +39,9 @@ del gateway YARP de [`07_reverse/01_deployment`](../07_reverse/01_deployment/REA
 src/
 ├── main.ts                       # Lee config.json y arranca; si falla muestra el error en la página
 ├── app/
-│   ├── app.config.ts             # Router, HttpClient + interceptor, angular-auth-oidc-client
+│   ├── app.config.ts             # Router (según el montaje), HttpClient + interceptor, angular-auth-oidc-client
 │   ├── app.routes.ts             # '' pública; menu, legfrontnewback y usuarios con authGuard
+│   ├── angular-page/             # Montaje en /legacy/AngularPage: rutas, MarcoLegacy (Site.Master) y enlaces a WebForms
 │   ├── core/
 │   │   ├── config/app-config.ts  # Contrato y validación de config.json
 │   │   └── auth/                 # AuthService, OidcAuthService, guards (sesión y rol), roles.ts, interceptor, MemorySecurityStorage
@@ -31,7 +50,8 @@ src/
 │       ├── menu/                 # Menú (menu-options.ts: opciones y roles que las ven)
 │       ├── sin-acceso/           # Con sesión pero sin ningún rol de la app
 │       ├── legfrontnewback/      # SalesApiService + sales-table (paginado de 50 en el servidor)
-│       └── usuarios/             # Checador de Asistencia: AsistenciaApiService, Geolocalizacion, mapa Leaflet
+│       ├── usuarios/             # Checador de Asistencia: AsistenciaApiService, Geolocalizacion, mapa Leaflet
+│       └── salas/                # Reservación de salas: SalasApiService, agenda.ts (bloques y tabla del día)
 public/config.json                # Config para ng serve (en el contenedor se genera al arrancar)
 proxy.conf.json                   # ng serve: /api → https://192.168.50.10
 docker/                           # nginx, plantillas y script que genera config.json y la CSP
