@@ -318,6 +318,8 @@ navegador ─► nginx ─► gateway ─► /           302 → /newapp/
                                  /newapp/*   frontend-newapp:8080 (06_frontend, red backend)
                                  /legacy/AngularPage*      frontend-newapp:8080 (Reservación de salas)
                                  /legacy/AngularPage.aspx  302 → /legacy/AngularPage
+                                 /legacy/Usuarios*         frontend-newapp:8080 (Checador de Asistencia)
+                                 /legacy/Usuarios.aspx     302 → /legacy/Usuarios
                                  /legacy/* (lo demás)      IIS, como siempre
              Angular ─► nginx ─► /auth/*     Keycloak (cliente frontend-spa, PKCE)
                       ─► nginx ─► gateway ─► /api/*  backend-api (Bearer del usuario)
@@ -349,6 +351,8 @@ curl -i --cacert rootCA.pem https://192.168.50.10/              # 302, Location:
 curl -i --cacert rootCA.pem https://192.168.50.10/newapp/menu   # 200 (lo sirve frontend-newapp)
 curl -i --cacert rootCA.pem https://192.168.50.10/legacy/AngularPage       # 200, index.html de Angular (<base href="/newapp/">)
 curl -i --cacert rootCA.pem https://192.168.50.10/legacy/AngularPage.aspx  # 302, Location: /legacy/AngularPage
+curl -i --cacert rootCA.pem https://192.168.50.10/legacy/Usuarios          # 200, index.html de Angular (legacy-usuarios-route)
+curl -i --cacert rootCA.pem https://192.168.50.10/legacy/Usuarios.aspx     # 302, Location: /legacy/Usuarios
 ```
 
 En el navegador: `/` → presentación → *Entrar* → Keycloak → menú. Desde el menú, `/taxes` y `/legacy`

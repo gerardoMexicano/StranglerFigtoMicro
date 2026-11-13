@@ -19,8 +19,8 @@
                 <div class="menu-icon">👥</div>
                 <h4>Usuarios</h4>
                 <p>Administración de usuarios del sistema.</p>
-                <%-- Migrada: el Checador de Asistencia ya es Angular + backend nuevo --%>
-                <a href="<%= ConfigurationManager.AppSettings("RutaNewApp") + "/usuarios" %>" class="menu-link">Ir a Usuarios</a>
+                <%-- Migrada: el gateway sirve /legacy/Usuarios con Angular + backend nuevo; el enlace no cambia --%>
+                <a href="Usuarios.aspx" class="menu-link">Ir a Usuarios</a>
             </div>
             <div class="menu-card">
                 <div class="menu-icon">⚙️</div>
