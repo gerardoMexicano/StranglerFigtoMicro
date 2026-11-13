@@ -14,7 +14,8 @@ import { APP_CONFIG, AppConfig } from '../core/config/app-config';
 import { Salas } from '../features/salas/salas';
 import { SinAcceso } from '../features/sin-acceso/sin-acceso';
 import { MarcoLegacy } from './marco-legacy';
-import { MONTAJE_ANGULAR_PAGE, MONTAJE_NEWAPP, montajePara } from './montaje';
+import { Usuarios } from '../features/usuarios/usuarios';
+import { MONTAJE_ANGULAR_PAGE, MONTAJE_NEWAPP, MONTAJE_USUARIOS, montajePara } from './montaje';
 
 const config: AppConfig = {
   oidc: { authority: 'http://kc/auth/realms/lab', clientId: 'frontend-spa', scope: 'openid' },
@@ -146,5 +147,66 @@ describe('rutas de /legacy/AngularPage', () => {
 
     expect(TestBed.inject(Router).url).toBe('/');
     TestBed.inject(HttpTestingController).match(() => true);
+  });
+});
+
+describe('rutas de /legacy/Usuarios', () => {
+  let auth: FakeAuthService;
+
+  beforeEach(() => {
+    auth = new FakeAuthService();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(MONTAJE_USUARIOS.routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: APP_CONFIG, useValue: config },
+        { provide: AuthService, useValue: auth },
+      ],
+    });
+  });
+
+  function conSesion(roles: string[]) {
+    auth.session.next(true);
+    auth.user.next({ userName: 'juan', name: 'Juan Pérez', roles });
+  }
+
+  it('el router usa /legacy/Usuarios/ como base', () => {
+    expect(MONTAJE_USUARIOS.baseHref).toBe('/legacy/Usuarios/');
+  });
+
+  it('la raíz es el Checador de Asistencia dentro del marco de WebForms, sin "Volver al menú"', async () => {
+    conSesion(['usuario']);
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/');
+    harness.detectChanges();
+
+    expect(harness.routeDebugElement?.componentInstance).toBeInstanceOf(MarcoLegacy);
+    const checador = harness.fixture.debugElement.query(
+      (d) => d.componentInstance instanceof Usuarios,
+    );
+    expect(checador).not.toBeNull();
+    expect((checador.nativeElement as HTMLElement).textContent).not.toContain('Volver al menú');
+    expect(document.title).toBe('Usuarios - Checador - Sistema Laboratorio');
+    TestBed.inject(HttpTestingController).match(() => true);
+  });
+
+  it('sin sesión manda a Keycloak para volver a la raíz del montaje', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/');
+
+    expect(auth.loginCalls).toEqual(['/']);
+  });
+
+  it('sin ningún rol del realm va a sin-acceso dentro del marco', async () => {
+    conSesion([]);
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/');
+
+    expect(TestBed.inject(Router).url).toBe('/sin-acceso');
+    expect(harness.routeDebugElement?.componentInstance).toBeInstanceOf(MarcoLegacy);
   });
 });
