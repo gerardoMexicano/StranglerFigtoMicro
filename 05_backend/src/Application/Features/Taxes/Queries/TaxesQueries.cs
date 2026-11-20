@@ -15,3 +15,8 @@ public sealed record GetSeismicComparisonQuery(
     double MinMagnitude = 1.0,
     int Seed = 2026) : IQuery<SeismicComparisonResultDto>;
 
+public sealed record GetPayrollSummaryQuery(
+    DateTime? StartDate = null,
+    DateTime? EndDate = null) : IQuery<PayrollSummaryReportDto>;
+
+

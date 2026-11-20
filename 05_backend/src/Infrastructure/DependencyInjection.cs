@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<ISalesReadRepository, SalesReadRepository>();
 
         services.AddScoped<ITaxesReadRepository, TaxesReadRepository>();
+        services.AddScoped<ITaxesWriteRepository, TaxesWriteRepository>();
 
         services.AddScoped<IDashboardReadRepository, DashboardReadRepository>();
 

@@ -211,6 +211,105 @@ public sealed class TaxesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetPayrollSummary_WithoutBearerToken_ShouldReturn401Unauthorized()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/taxes/payroll-summary?startDate=2024-01-01&endDate=2024-12-31");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("usuario")]
+    [InlineData("admin")]
+    [InlineData("invitado")]
+    public async Task GetPayrollSummary_WithAnyReadRole_ShouldReturn200OkAndSummaryPayload(string role)
+    {
+        using var client = CreateAuthenticatedClient(role);
+        var response = await client.GetAsync("/api/taxes/payroll-summary?startDate=2024-01-01&endDate=2024-12-31");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<PayrollSummaryReportDto>();
+        Assert.NotNull(payload);
+        Assert.Equal(1, payload.TotalRecibos);
+        Assert.Equal(15000.00m, payload.GranTotalPercepciones);
+        Assert.Equal(2499.50m, payload.GranTotalDeducciones);
+        Assert.Equal(12500.50m, payload.GranTotalNeto);
+    }
+
+    [Fact]
+    public async Task UploadXmlBatch_WithoutBearerToken_ShouldReturn401Unauthorized()
+    {
+        using var client = _factory.CreateClient();
+        using var content = CreateMultipartXmlContent(("nomina1.xml", SamplePayrollXml));
+        var response = await client.PostAsync("/api/taxes/xml-batch", content);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadXmlBatch_WithInvitadoRole_ShouldReturn403Forbidden()
+    {
+        using var client = CreateAuthenticatedClient("invitado");
+        using var content = CreateMultipartXmlContent(("nomina1.xml", SamplePayrollXml));
+        var response = await client.PostAsync("/api/taxes/xml-batch", content);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("usuario")]
+    [InlineData("admin")]
+    public async Task UploadXmlBatch_WithWriteRole_ShouldReturn200OkAndProcessedSummary(string role)
+    {
+        using var client = CreateAuthenticatedClient(role);
+        using var content = CreateMultipartXmlContent(("nomina1.xml", SamplePayrollXml));
+        var response = await client.PostAsync("/api/taxes/xml-batch", content);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<BulkXmlUploadResultDto>();
+        Assert.NotNull(payload);
+        Assert.Equal(1, payload.ReceivedCount);
+        Assert.Equal(1, payload.ProcessedCount);
+        Assert.Equal(0, payload.InvalidCount);
+    }
+
+    [Fact]
+    public async Task UploadXmlBatch_WithoutFiles_ShouldReturn400BadRequest()
+    {
+        using var client = CreateAuthenticatedClient("usuario");
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent("empty"), "note");
+        var response = await client.PostAsync("/api/taxes/xml-batch", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    private static MultipartFormDataContent CreateMultipartXmlContent(params (string FileName, string Xml)[] files)
+    {
+        var content = new MultipartFormDataContent();
+        foreach (var (fileName, xml) in files)
+        {
+            var fileContent = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(xml));
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/xml");
+            content.Add(fileContent, "xmlFiles", fileName);
+        }
+        return content;
+    }
+
+    private const string SamplePayrollXml = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+                          xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+                          xmlns:nomina12="http://www.sat.gob.mx/nomina12"
+                          Version="4.0" Serie="NOM" Folio="101" Fecha="2024-06-15T12:00:00"
+                          SubTotal="15000.00" Descuento="2499.50" Total="12500.50"
+                          Moneda="MXN" TipoDeComprobante="N" MetodoPago="PUE" LugarExpedicion="06600">
+          <cfdi:Emisor Rfc="AAA010101AAA" Nombre="EMPRESA DEMO SA DE CV" RegimenFiscal="601" />
+          <cfdi:Receptor Rfc="GODE561231GR8" Nombre="JUAN PEREZ" UsoCFDI="CN01" />
+          <cfdi:Complemento>
+            <tfd:TimbreFiscalDigital UUID="11111111-2222-3333-4444-555555555555" FechaTimbrado="2024-06-15T12:05:00" RfcProvCertif="SAT970701NN3" />
+            <nomina12:Nomina Version="1.2" TipoNomina="O" FechaPago="2024-06-15" FechaInicialPago="2024-06-01" FechaFinalPago="2024-06-15" NumDiasPagados="15" TotalPercepciones="15000.00" TotalDeducciones="2499.50">
+              <nomina12:Receptor NumEmpleado="EMP-001" Departamento="Tecnología" Puesto="Desarrollador Senior" TipoContrato="01" TipoRegimen="02" PeriodicidadPago="04" SalarioBaseCotApor="1000.00" SalarioDiarioIntegrado="1050.00" />
+            </nomina12:Nomina>
+          </cfdi:Complemento>
+        </cfdi:Comprobante>
+        """;
 
     private HttpClient CreateAuthenticatedClient() => CreateAuthenticatedClient([]);
 
@@ -222,6 +321,8 @@ public sealed class TaxesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
             {
                 services.RemoveAll<ITaxesReadRepository>();
                 services.AddScoped<ITaxesReadRepository, StubTaxesReadRepository>();
+                services.RemoveAll<ITaxesWriteRepository>();
+                services.AddScoped<ITaxesWriteRepository, StubTaxesWriteRepository>();
 
                 services.AddAuthentication(options =>
                 {
@@ -264,6 +365,34 @@ public sealed class TaxesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
                     Concepto: "Sueldo",
                     Importe: 15000.00m)
             ], page, pageSize, 1));
+
+        public Task<IReadOnlyList<PayrollReceiptItemDto>> GetPayrollReceiptsAsync(
+            DateTime? startDate,
+            DateTime? endDate,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<PayrollReceiptItemDto>>(
+            [
+                new PayrollReceiptItemDto(
+                    UUID: Guid.Parse("11111111-2222-3333-4444-555555555555"),
+                    Fecha: new DateTime(2024, 6, 15),
+                    ReceptorNombre: "Juan Pérez",
+                    ReceptorRFC: "XAXX010101000",
+                    Total: 12500.50m,
+                    FechaPago: new DateTime(2024, 6, 15),
+                    TotalPercepciones: 15000.00m,
+                    TotalDeducciones: 2499.50m,
+                    NumEmpleado: "EMP-001",
+                    Departamento: "Tecnología",
+                    Puesto: "Desarrollador Senior")
+            ]);
+    }
+
+    private sealed class StubTaxesWriteRepository : ITaxesWriteRepository
+    {
+        public Task<int> UpsertBatchAsync(
+            IReadOnlyList<ParsedCfdiCoreRecord> records,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(records.Count);
     }
 
     private sealed class TestAuthHandler(
