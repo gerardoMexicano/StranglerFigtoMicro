@@ -2,7 +2,6 @@ import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { PaginaAngular } from './pagina-angular';
 import { PaginaAntigua } from './pagina-antigua';
 import { PaginaAntiguaNuevoBackend } from './pagina-antigua-nuevo-backend';
 
@@ -20,7 +19,6 @@ describe('Hojas vacías de Second System Broken', () => {
   it.each([
     [PaginaAntigua, 'Página Antigua'],
     [PaginaAntiguaNuevoBackend, 'Página Antigua (Nuevo Backend)'],
-    [PaginaAngular, 'Página en Angular'],
   ])(
     'pinta %s con título "%s" y enlace de regreso a /second-system-broken',
     async (comp, titulo) => {
