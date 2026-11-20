@@ -1,0 +1,134 @@
+<main class="pagina">
+  <a class="boton boton-texto" routerLink="/second-system-broken"
+    >← Volver a Second System Broken</a
+  >
+
+  <h1>Reporte Masivo Consolidado</h1>
+  <p class="resumen">Consulta paginada asíncrona hacia el nuevo backend .NET 10 (Strangler Fig).</p>
+  <p class="origen">
+    Origen de datos: <strong>backend .NET 10 (/api/taxes/consolidated-report)</strong>
+  </p>
+
+  <form class="filtros" (ngSubmit)="consultar()">
+    <label>
+      Fecha Inicio
+      <input type="date" name="fechaInicio" required [(ngModel)]="inicio" />
+    </label>
+    <label>
+      Fecha Fin
+      <input type="date" name="fechaFin" required [(ngModel)]="fin" />
+    </label>
+    <button type="submit" class="boton" [disabled]="sinFechas() || rangoInvalido()">
+      Consultar
+    </button>
+    <button type="button" class="boton boton-secundario" (click)="limpiar()">Limpiar</button>
+    @if (rangoInvalido()) {
+      <p class="error" role="alert">La fecha inicial debe ser anterior o igual a la final.</p>
+    }
+  </form>
+
+  @if (!consulta()) {
+    <p class="aviso aviso-info">
+      Por favor, utilice el filtro de fechas para consultar los registros.
+    </p>
+  } @else if (error(); as mensaje) {
+    <p class="aviso aviso-error" role="alert">{{ mensaje }}</p>
+  } @else if (reporte.isLoading()) {
+    <p class="aviso aviso-info" role="status">Consultando 05_backend…</p>
+  } @else if (pagina(); as p) {
+    @if (p.items.length > 0) {
+      <p class="aviso aviso-exito" role="status">
+        Mostrando {{ p.items.length | number }} de {{ p.totalCount | number }} registros (Página
+        {{ p.page | number }} de {{ p.totalPages | number }}) desde 05_backend.
+      </p>
+    }
+  }
+
+  <div class="desplazable" tabindex="0" aria-label="Reporte Masivo Consolidado">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">UUID</th>
+          <th scope="col">Emisor</th>
+          <th scope="col">Receptor</th>
+          <th scope="col">Total</th>
+          <th scope="col">Fecha</th>
+          <th scope="col">Complemento</th>
+          <th scope="col">Num Emp.</th>
+          <th scope="col">Depto.</th>
+          <th scope="col">Puesto</th>
+          <th scope="col">Tot. Perc.</th>
+          <th scope="col">Tot. Deduc.</th>
+          <th scope="col">Movimiento</th>
+          <th scope="col">Concepto</th>
+          <th scope="col">Importe</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (!consulta()) {
+          <tr>
+            <td colspan="14" class="vacia">
+              Utilice el filtro de arriba para consultar los datos.
+            </td>
+          </tr>
+        } @else if (pagina(); as p) {
+          @for (fila of p.items; track $index) {
+            <tr>
+              <td>
+                <small>{{ fila.uuid }}</small>
+              </td>
+              <td>{{ fila.emisorRFC }}</td>
+              <td>{{ fila.receptorRFC }}</td>
+              <td>{{ fila.total | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td>{{ fila.fecha | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ fila.tipoComplemento }}</td>
+              <td>{{ fila.numEmpleado }}</td>
+              <td>{{ fila.departamento }}</td>
+              <td>{{ fila.puesto }}</td>
+              <td>{{ fila.totalPercepciones | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td>{{ fila.totalDeducciones | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td>{{ fila.tipoMovimiento }}</td>
+              <td [attr.title]="fila.concepto">{{ concepto(fila.concepto) }}</td>
+              <td>{{ fila.importe | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="14" class="vacia">
+                No se encontraron registros para el rango de fechas seleccionado.
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (pagina(); as p) {
+    @if (p.items.length > 0) {
+      <nav class="paginador" aria-label="Paginación del reporte consolidado">
+        <button
+          type="button"
+          class="boton boton-secundario"
+          [disabled]="!p.hasPreviousPage || reporte.isLoading()"
+          (click)="irA(p.page - 1)"
+        >
+          Anterior
+        </button>
+        <span
+          >Página {{ p.page | number }} de {{ p.totalPages | number }} ({{
+            p.totalCount | number
+          }}
+          registros)</span
+        >
+        <button
+          type="button"
+          class="boton boton-secundario"
+          [disabled]="!p.hasNextPage || reporte.isLoading()"
+          (click)="irA(p.page + 1)"
+        >
+          Siguiente
+        </button>
+      </nav>
+    }
+  }
+</main>

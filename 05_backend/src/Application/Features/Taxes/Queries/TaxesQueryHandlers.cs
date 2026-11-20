@@ -165,4 +165,57 @@ public sealed class GetSeismicComparisonQueryHandler
     }
 }
 
+public sealed class GetPayrollSummaryQueryHandler(ITaxesReadRepository repository)
+    : IQueryHandler<GetPayrollSummaryQuery, PayrollSummaryReportDto>
+{
+    private readonly ITaxesReadRepository _repository = repository;
+
+    public async Task<Result<PayrollSummaryReportDto>> HandleAsync(
+        GetPayrollSummaryQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        if (query.StartDate.HasValue && query.EndDate.HasValue && query.StartDate.Value.Date > query.EndDate.Value.Date)
+        {
+            return Result.Failure<PayrollSummaryReportDto>(Error.Validation(
+                "Taxes.InvalidDateRange",
+                "La fecha de inicio no puede ser mayor que la fecha final."));
+        }
+
+        DateTime? normalizedStart = query.StartDate?.Date;
+        DateTime? normalizedEnd = query.EndDate?.Date.AddDays(1).AddTicks(-1);
+
+        var receipts = await _repository.GetPayrollReceiptsAsync(normalizedStart, normalizedEnd, cancellationToken);
+
+        decimal granTotalPercepciones = 0m;
+        decimal granTotalDeducciones = 0m;
+        decimal granTotalNeto = 0m;
+        var costByDept = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in receipts)
+        {
+            granTotalPercepciones += item.TotalPercepciones;
+            granTotalDeducciones += item.TotalDeducciones;
+            granTotalNeto += item.Total;
+
+            var depto = string.IsNullOrWhiteSpace(item.Departamento) ? "Sin Departamento" : item.Departamento.Trim();
+            costByDept[depto] = costByDept.TryGetValue(depto, out var current)
+                ? current + item.TotalPercepciones
+                : item.TotalPercepciones;
+        }
+
+        var deptList = costByDept
+            .OrderByDescending(kv => kv.Value)
+            .Select(kv => new DepartmentPayrollCostDto(kv.Key, kv.Value))
+            .ToList();
+
+        return Result.Success(new PayrollSummaryReportDto(
+            GranTotalPercepciones: granTotalPercepciones,
+            GranTotalDeducciones: granTotalDeducciones,
+            GranTotalNeto: granTotalNeto,
+            TotalRecibos: receipts.Count,
+            CostoPorDepartamento: deptList,
+            Nominas: receipts));
+    }
+}
+
 

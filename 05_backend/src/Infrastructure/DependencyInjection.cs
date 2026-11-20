@@ -1,6 +1,7 @@
 using Application.Common.Abstractions;
 using Application.Features.Attendance.Abstractions;
 using Application.Features.RoomBookings.Abstractions;
+using Application.Features.Dashboard.Abstractions;
 using Application.Features.Sales.Abstractions;
 using Application.Features.Taxes.Abstractions;
 using Infrastructure.Identity;
@@ -47,6 +48,9 @@ public static class DependencyInjection
         services.AddScoped<ISalesReadRepository, SalesReadRepository>();
 
         services.AddScoped<ITaxesReadRepository, TaxesReadRepository>();
+        services.AddScoped<ITaxesWriteRepository, TaxesWriteRepository>();
+
+        services.AddScoped<IDashboardReadRepository, DashboardReadRepository>();
 
         services.AddScoped<ICheckInRepository, CheckInRepository>();
 
