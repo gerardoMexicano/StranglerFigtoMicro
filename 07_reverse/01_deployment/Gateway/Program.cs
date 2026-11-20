@@ -41,6 +41,12 @@ app.MapMethods("/", [HttpMethods.Get, HttpMethods.Head], () => Results.Redirect(
 app.MapMethods("/legacy/AngularPage.aspx", [HttpMethods.Get, HttpMethods.Head],
     () => Results.Redirect("/legacy/AngularPage"));
 
+// /legacy/Usuarios: igual que AngularPage. La URL de la página migrada sigue existiendo bajo /legacy
+// y la sirve el frontend nuevo (legacy-usuarios-route), con el Checador de Asistencia de Angular.
+// Rollback: quitar esa ruta y esta línea; Usuarios.aspx en IIS redirige a /newapp/usuarios.
+app.MapMethods("/legacy/Usuarios.aspx", [HttpMethods.Get, HttpMethods.Head],
+    () => Results.Redirect("/legacy/Usuarios"));
+
 app.MapReverseProxy();
 
 app.Run();

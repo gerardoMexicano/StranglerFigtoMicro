@@ -1,8 +1,9 @@
 ﻿Imports System.Configuration
 
-' Strangler Fig: el Checador de Asistencia ya vive en Angular (/newapp/usuarios), que registra
-' cada check-in en 05_backend (/api/attendance/check-ins). Esta página queda solo para que los
-' enlaces y favoritos viejos a /legacy/Usuarios.aspx sigan llegando a la versión nueva.
+' Strangler Fig: el Checador de Asistencia ya es Angular y registra cada check-in en 05_backend
+' (/api/attendance/check-ins). Por el gateway esta página ni se alcanza: /legacy/Usuarios y
+' /legacy/Usuarios.aspx los sirve el frontend nuevo (legacy-usuarios-route). Este redirect queda
+' para quien entre directo al IIS, sin gateway.
 Public Class Usuarios
     Inherits System.Web.UI.Page
 

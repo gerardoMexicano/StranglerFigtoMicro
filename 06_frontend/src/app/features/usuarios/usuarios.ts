@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -35,6 +35,9 @@ export class Usuarios {
   private readonly geolocalizacion = inject(Geolocalizacion);
   private readonly notificacion = inject(NotificacionNativa);
   private readonly usuario = toSignal(inject(AuthService).user$, { initialValue: null });
+
+  /** En /legacy/Usuarios el Menú está en la barra del marco de WebForms; /menu es de /newapp. */
+  protected readonly enMarcoLegacy = inject(ActivatedRoute).snapshot.data['enMarcoLegacy'] === true;
 
   protected readonly puedeRegistrar = computed(
     () => this.usuario()?.roles.some((rol) => ROLES_ESCRITURA.includes(rol)) ?? false,

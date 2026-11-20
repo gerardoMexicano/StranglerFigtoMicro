@@ -52,6 +52,8 @@ public sealed class RutasRetiradasTests : IClassFixture<WebApplicationFactory<Pr
     [Theory]
     [InlineData("/legacy/AngularPage/")]
     [InlineData("/legacy/AngularPage/salas")]
+    [InlineData("/legacy/Usuarios/")]
+    [InlineData("/legacy/Usuarios/historial")]
     [InlineData("/api/taxes/payroll-summary")]
     [InlineData("/newapp/")]
     [InlineData("/legacyx/algo")]
@@ -67,15 +69,17 @@ public sealed class RutasRetiradasTests : IClassFixture<WebApplicationFactory<Pr
             $"{ruta} no debía mandarse a /rutas-retiradas");
     }
 
-    [Fact]
-    public async Task Get_AngularPageAspx_SigueRedirigiendoALaVersionAngular()
+    [Theory]
+    [InlineData("/legacy/AngularPage.aspx", "/legacy/AngularPage")]
+    [InlineData("/legacy/Usuarios.aspx", "/legacy/Usuarios")]
+    public async Task Get_AspxMigrada_SigueRedirigiendoALaVersionAngular(string aspx, string angular)
     {
         using var client = CrearCliente();
 
-        var response = await client.GetAsync("/legacy/AngularPage.aspx");
+        var response = await client.GetAsync(aspx);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Equal("/legacy/AngularPage", response.Headers.Location?.OriginalString);
+        Assert.Equal(angular, response.Headers.Location?.OriginalString);
     }
 
     [Fact]

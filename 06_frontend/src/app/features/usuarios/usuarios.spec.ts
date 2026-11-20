@@ -198,15 +198,13 @@ describe('Usuarios', () => {
     historial([]);
 
     await checar();
-    backend
-      .expectOne('/api/attendance/check-ins')
-      .flush(
-        {
-          title: 'Solicitud inválida',
-          detail: 'La latitud es obligatoria y debe estar entre -90 y 90.',
-        },
-        { status: 400, statusText: 'Bad Request' },
-      );
+    backend.expectOne('/api/attendance/check-ins').flush(
+      {
+        title: 'Solicitud inválida',
+        detail: 'La latitud es obligatoria y debe estar entre -90 y 90.',
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
     await asentar();
 
     expect(aviso()).toBe('La latitud es obligatoria y debe estar entre -90 y 90.');
