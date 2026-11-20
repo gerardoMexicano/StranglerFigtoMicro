@@ -71,6 +71,7 @@ public sealed class TaxesEndpoints : IEndpoint
         })
         .RequireAuthorization("UsuarioOrAdmin")
         .DisableAntiforgery()
+        .WithBulkXmlUploadLimits()
         .WithName("UploadTaxesXmlBatch")
         .WithSummary("Carga masiva de hasta 5000 archivos XML CFDI 4.0 de nómina a CfdiCore, CfdiComplemento, NominaResumen y NominaMovimiento.")
         .Produces<BulkXmlUploadResultDto>(StatusCodes.Status200OK)
