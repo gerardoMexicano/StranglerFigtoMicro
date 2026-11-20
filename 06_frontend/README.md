@@ -9,11 +9,11 @@ del gateway YARP de [`07_reverse/01_deployment`](../07_reverse/01_deployment/REA
 | `/newapp/` | Pública | Presentación con el botón *Entrar*, que lleva al login de Keycloak. |
 | `/newapp/menu` | Con sesión | Menú de bienvenida en Angular con acceso a los dos submenús: **System Principal** (`/newapp/system-principal`) y **Second System Broken** (`/newapp/second-system-broken`). |
 | `/newapp/system-principal` | Con sesión | Menú Angular que reemplaza al menú principal anterior, con sus 7 accesos: Reportes, Usuarios (`/newapp/usuarios`), Configuración, Dashboard, Second System Broken (`/newapp/second-system-broken`), Reservación de salas (`/newapp/salas`) y LEgFrontNEWBACK (`/newapp/legfrontnewback`). |
-| `/newapp/system-principal/reportes` | Con sesión | Hoja vacía en Angular para Reportes. |
-| `/newapp/system-principal/configuracion` | Con sesión | Hoja vacía en Angular para Configuración. |
+| `/newapp/system-principal/reportes` | Con sesión | **L2 — Reportes:** carga uno o varios archivos XML CFDI 4.0 a `05_backend` (`POST /api/reports/cfdi-pdf-batch`) y descarga el archivo `ReportesGenerados.zip` con un PDF (`Reporte_<UUID>.pdf`) por cada factura válida. |
+| `/newapp/system-principal/configuracion` | Con sesión | **L3 — Configuración:** panel de perfil e identidad OIDC validado contra `05_backend` (`GET /api/system/me`), matriz de permisos por rol de Keycloak (`admin`, `usuario`, `invitado`), información del entorno (`config.json`) y preferencias visuales locales en el navegador. |
 | `/newapp/system-principal/dashboard` | Con sesión | Hoja vacía en Angular para Dashboard. |
 | `/newapp/second-system-broken` | Con sesión | Menú Angular que reemplaza al segundo menú anterior, con sus 4 accesos: Página Antigua, Página Antigua (Nuevo Backend), Página en Angular y Página Principal (`/newapp/system-principal`). |
-| `/newapp/second-system-broken/pagina-antigua` | Con sesión | Hoja vacía en Angular para Página Antigua. |
+| `/newapp/second-system-broken/pagina-antigua` | Con sesión | **B1 — Página Antigua (Dashboard Nómina):** carga masiva de hasta 5,000 archivos XML CFDI 4.0 de nómina a la BD (`POST /api/taxes/xml-batch`, roles `usuario` y `admin`) y dashboard con filtro de fechas, KPIs, costo por departamento y tabla de recibos (`GET /api/taxes/payroll-summary`). |
 | `/newapp/second-system-broken/pagina-antigua-nuevo-backend` | Con sesión | Hoja vacía en Angular para Página Antigua (Nuevo Backend). |
 | `/newapp/second-system-broken/pagina-angular` | Con sesión | Hoja vacía en Angular para Página en Angular. |
 | `/newapp/legfrontnewback` | Con sesión | Versión Angular de `LEgFrontNEWBACK.aspx`: las 5 tablas de ventas desde `05_backend` (`/api/sales/*`). |
