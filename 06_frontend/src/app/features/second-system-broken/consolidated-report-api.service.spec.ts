@@ -31,7 +31,11 @@ function configurar(apiBaseUrl: string) {
   return { service: TestBed.inject(ConsolidatedReportApiService), backend: backendActual };
 }
 
-const consulta: ConsolidatedReportQuery = { startDate: '2024-01-01', endDate: '2024-03-31', page: 2 };
+const consulta: ConsolidatedReportQuery = {
+  startDate: '2024-01-01',
+  endDate: '2024-03-31',
+  page: 2,
+};
 
 describe('ConsolidatedReportApiService', () => {
   afterEach(() => {

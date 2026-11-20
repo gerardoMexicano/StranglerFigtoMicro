@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -48,10 +48,17 @@ export interface PagedResult<T> {
 @Injectable({ providedIn: 'root' })
 export class ConsolidatedReportApiService {
   private readonly http = inject(HttpClient);
-  private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
+  private readonly url = `${inject(APP_CONFIG).apiBaseUrl.replace(/\/+$/, '')}/taxes/consolidated-report`;
 
-  getPage(_query: ConsolidatedReportQuery): Observable<PagedResult<ConsolidatedReportItem>> {
-    // Fase Red (TDD): contrato mínimo, la implementación llega tras aprobar las pruebas
-    throw new Error('Sin implementar');
+  getPage(query: ConsolidatedReportQuery): Observable<PagedResult<ConsolidatedReportItem>> {
+    const params = new HttpParams({
+      fromObject: {
+        startDate: query.startDate,
+        endDate: query.endDate,
+        page: query.page,
+        pageSize: CONSOLIDATED_REPORT_PAGE_SIZE,
+      },
+    });
+    return this.http.get<PagedResult<ConsolidatedReportItem>>(this.url, { params });
   }
 }

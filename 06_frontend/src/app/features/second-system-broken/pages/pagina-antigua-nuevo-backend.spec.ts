@@ -4,10 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { APP_CONFIG, AppConfig } from '../../../core/config/app-config';
-import {
-  ConsolidatedReportItem,
-  PagedResult,
-} from '../consolidated-report-api.service';
+import { ConsolidatedReportItem, PagedResult } from '../consolidated-report-api.service';
 import { PaginaAntiguaNuevoBackend } from './pagina-antigua-nuevo-backend';
 
 const config: AppConfig = {
@@ -182,7 +179,9 @@ describe('PaginaAntiguaNuevoBackend', () => {
   it('deja vacías las celdas de importes nulos en lugar de $0.00', async () => {
     await consultar();
     await responder(
-      pagina([fila({ total: null, totalPercepciones: null, totalDeducciones: null, importe: null })]),
+      pagina([
+        fila({ total: null, totalPercepciones: null, totalDeducciones: null, importe: null }),
+      ]),
     );
 
     const valores = celdas().map((td) => td.textContent?.trim());
@@ -237,9 +236,7 @@ describe('PaginaAntiguaNuevoBackend', () => {
     await consultar();
     await responder(pagina([]));
 
-    expect(texto()).toContain(
-      'No se encontraron registros para el rango de fechas seleccionado.',
-    );
+    expect(texto()).toContain('No se encontraron registros para el rango de fechas seleccionado.');
   });
 
   it('con la fecha inicial después de la final avisa y no pide nada', async () => {
@@ -258,7 +255,10 @@ describe('PaginaAntiguaNuevoBackend', () => {
     backend
       .expectOne((r) => r.url === URL_REPORTE)
       .flush(
-        { title: 'Validation', detail: 'La fecha de inicio no puede ser mayor que la fecha final.' },
+        {
+          title: 'Validation',
+          detail: 'La fecha de inicio no puede ser mayor que la fecha final.',
+        },
         { status: 400, statusText: 'Bad Request' },
       );
     await fixture.whenStable();
