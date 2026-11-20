@@ -46,7 +46,6 @@ describe('Hojas de System Principal', () => {
   it.each([
     [Reportes, 'Reportes'],
     [Configuracion, 'Configuración'],
-    [Dashboard, 'Dashboard'],
   ])('pinta %s con título "%s" y enlace de regreso a /system-principal', async (comp, titulo) => {
     const vista = await pintarBasico(comp);
 

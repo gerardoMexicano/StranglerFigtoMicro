@@ -1,0 +1,150 @@
+<main class="pagina">
+  <a class="boton boton-texto" routerLink="/system-principal">← Volver a System Principal</a>
+
+  <h1>Dashboard Ejecutivo</h1>
+  <p class="resumen">
+    WideWorldImporters · datos desde el backend .NET 10 (/api/dashboard/executive)
+  </p>
+
+  <form class="filtros" (ngSubmit)="aplicar()">
+    <label>
+      Desde
+      <input type="date" name="inicio" required [(ngModel)]="inicio" />
+    </label>
+    <label>
+      Hasta
+      <input type="date" name="fin" required [(ngModel)]="fin" />
+    </label>
+    <button type="submit" class="boton" [disabled]="rangoInvalido() || dashboard.isLoading()">
+      Aplicar filtro
+    </button>
+    @if (rangoInvalido()) {
+      <p class="error" role="alert">La fecha inicial debe ser anterior o igual a la final.</p>
+    }
+  </form>
+
+  @if (error(); as mensaje) {
+    <p class="panel-error" role="alert">⚠️ Error al cargar datos: {{ mensaje }}</p>
+  }
+
+  <div [attr.aria-busy]="dashboard.isLoading()">
+    <section class="kpis" aria-label="KPIs ejecutivos">
+      @for (k of kpis(); track k.id) {
+        <div class="tarjeta kpi" [attr.data-kpi]="k.id">
+          <div class="kpi-etiqueta">{{ k.etiqueta }}</div>
+          <div class="kpi-valor">{{ k.valor }}</div>
+          @if (k.delta; as d) {
+            <div class="kpi-delta" [class.sube]="d.sube" [class.baja]="!d.sube">{{ d.texto }}</div>
+          } @else {
+            <div class="kpi-delta">…</div>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="tarjeta" aria-label="Ingresos por mes">
+      <h2>Ingresos Brutos · Impuestos · Total mensual</h2>
+      @if (meses().length === 0) {
+        <p class="vacia">Sin datos para el período seleccionado</p>
+      } @else {
+        <div class="desplazable">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Mes</th>
+                <th scope="col">Ingresos brutos</th>
+                <th scope="col">Impuestos</th>
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of meses(); track m.year * 100 + m.month) {
+                <tr>
+                  <td>{{ m.etiqueta }}</td>
+                  <td>{{ moneda(m.grossRevenue) }}</td>
+                  <td>{{ moneda(m.taxes) }}</td>
+                  <td>{{ moneda(m.totalRevenue) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <div class="fila-2">
+      <section class="tarjeta" aria-label="Top 10 clientes">
+        <h2>Top 10 clientes por rentabilidad neta</h2>
+        @if (clientes().length === 0) {
+          <p class="vacia">Sin datos para el período seleccionado</p>
+        } @else {
+          <ol class="barras">
+            @for (c of clientes(); track c.customer) {
+              <li>
+                <span class="nombre">{{ c.customer }}&ngsp;</span>
+                <span class="monto">{{ moneda(c.netMargin) }}</span>
+                <span class="barra" aria-hidden="true"
+                  ><span [style.width.%]="c.ancho"></span
+                ></span>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+
+      <section class="tarjeta" aria-label="Margen por categoría">
+        <h2>Margen por categoría de producto</h2>
+        @if (categorias().length === 0) {
+          <p class="vacia">Sin datos para el período seleccionado</p>
+        } @else {
+          <ul class="barras">
+            @for (c of categorias(); track c.category) {
+              <li>
+                <span class="nombre">{{ c.category }}&ngsp;</span>
+                <span class="monto">{{ moneda(c.grossMargin) }} ({{ c.pct }}%)</span>
+                <span class="barra" aria-hidden="true"
+                  ><span [style.width.%]="c.participacion"></span
+                ></span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+
+    <section class="tarjeta" aria-label="Eficiencia del vendedor">
+      <h2>Eficiencia del vendedor</h2>
+      <p class="subtitulo">
+        Revenue total y % de margen promedio — rojo si el margen es menor a 20 %
+      </p>
+      @if (vendedores().length === 0) {
+        <p class="vacia">Sin datos para el período seleccionado</p>
+      } @else {
+        <div class="desplazable">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Vendedor</th>
+                <th scope="col">Revenue total</th>
+                <th scope="col">% Margen prom.</th>
+                <th scope="col">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of vendedores(); track v.salesperson; let i = $index) {
+                <tr [class.alerta]="v.lowMargin">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ v.salesperson }}</td>
+                  <td>{{ moneda(v.revenue) }}</td>
+                  <td>{{ porcentaje(v.marginPct) }}</td>
+                  <td>{{ v.lowMargin ? '⚠ Margen bajo' : '✓ OK' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </div>
+</main>

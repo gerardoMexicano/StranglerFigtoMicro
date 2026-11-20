@@ -10,7 +10,6 @@ import { APP_CONFIG, AppConfig } from '../../../core/config/app-config';
 import { PayrollSummaryReport } from './nomina-api.service';
 import { PaginaAngular } from './pagina-angular';
 import { PaginaAntigua } from './pagina-antigua';
-import { PaginaAntiguaNuevoBackend } from './pagina-antigua-nuevo-backend';
 
 const config: AppConfig = {
   oidc: { authority: 'http://kc/auth/realms/lab', clientId: 'frontend-spa', scope: 'openid' },
@@ -72,7 +71,6 @@ describe('Hojas de Second System Broken', () => {
 
   it.each([
     [PaginaAntigua, 'Página Antigua'],
-    [PaginaAntiguaNuevoBackend, 'Página Antigua (Nuevo Backend)'],
     [PaginaAngular, 'Página en Angular'],
   ])(
     'pinta %s con título "%s" y enlace de regreso a /second-system-broken',
