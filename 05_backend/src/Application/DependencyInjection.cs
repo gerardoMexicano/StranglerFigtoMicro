@@ -3,6 +3,8 @@ using Application.Common.Models;
 using Application.Features.Attendance.Commands;
 using Application.Features.Attendance.Dtos;
 using Application.Features.Attendance.Queries;
+using Application.Features.Dashboard.Dtos;
+using Application.Features.Dashboard.Queries;
 using Application.Features.RoomBookings.Commands;
 using Application.Features.RoomBookings.Dtos;
 using Application.Features.RoomBookings.Queries;
@@ -31,6 +33,9 @@ public static class DependencyInjection
         // Casos de uso extraídos de /taxes/Home/PaginaAntiguaNuevoBackend y /taxes/Home/PaginaAngular
         services.AddScoped<IQueryHandler<GetConsolidatedReportQuery, PagedResult<ConsolidatedReportItemDto>>, GetConsolidatedReportQueryHandler>();
         services.AddScoped<IQueryHandler<GetSeismicComparisonQuery, SeismicComparisonResultDto>, GetSeismicComparisonQueryHandler>();
+
+        // Dashboard Ejecutivo migrado de /legacy/Dashboard.aspx (WideWorldImporters)
+        services.AddScoped<IQueryHandler<GetExecutiveDashboardQuery, ExecutiveDashboardDto>, GetExecutiveDashboardQueryHandler>();
 
         // Checador de Asistencia migrado de /legacy/Usuarios.aspx
         services.AddScoped<ICommandHandler<RegisterCheckInCommand, CheckInDto>, RegisterCheckInCommandHandler>();
