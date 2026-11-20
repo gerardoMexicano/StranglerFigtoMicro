@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -33,7 +34,7 @@ type CeldaLibre = Extract<Celda, { tipo: 'libre' }>;
  */
 @Component({
   selector: 'app-salas',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './salas.html',
   styleUrl: './salas.css',
 })

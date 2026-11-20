@@ -1,60 +1,35 @@
-import { enlacesLegacy } from '../../angular-page/enlaces-legacy';
-import { ROLES_LECTURA, ROLES_LEGACY } from '../../core/auth/roles';
-import { AppConfig } from '../../core/config/app-config';
+import { ROLES_LECTURA } from '../../core/auth/roles';
 
 export interface MenuOption {
-  id: 'taxes' | 'legacy' | 'legfrontnewback' | 'usuarios' | 'salas';
+  id: 'system-principal' | 'second-system-broken';
   title: string;
   description: string;
   url: string;
-  /** true: página completa (app legacy en IIS o /legacy/AngularPage). false: ruta de /newapp. */
-  external: boolean;
+  /** Todas las rutas del nuevo menú viven dentro de Angular (/newapp). */
+  external: false;
   /** Roles de realm que pueden verla. Vacío = todos. */
   roles: readonly string[];
 }
 
-/** Las opciones del menú, con las URLs de las apps legacy tomadas de config.json. */
-export function buildMenuOptions(config: AppConfig): MenuOption[] {
+/** Opciones del menú principal (/newapp/menu): accesos a los dos sistemas en Angular, sin referencias a legacy ni broken. */
+export function buildMenuOptions(): MenuOption[] {
   return [
     {
-      id: 'taxes',
-      title: 'BrokenTaxes',
-      description: 'Aplicación MVC (/taxes) en IIS.',
-      url: config.apps.taxesUrl,
-      external: true,
-      roles: ROLES_LEGACY,
-    },
-    {
-      id: 'legacy',
-      title: 'Legacy WebForms',
-      description: 'Aplicación WebForms (/legacy) en IIS.',
-      url: config.apps.legacyUrl,
-      external: true,
-      roles: ROLES_LEGACY,
-    },
-    {
-      id: 'legfrontnewback',
-      title: 'LEgFrontNEWBACK',
-      description: 'Ventas de WideWorldImporters desde el backend .NET 10.',
-      url: '/legfrontnewback',
+      id: 'system-principal',
+      title: 'System Principal',
+      description:
+        'Sistema principal en Angular: reportes, usuarios, configuración, dashboard, reservación de salas y ventas.',
+      url: '/system-principal',
       external: false,
       roles: ROLES_LECTURA,
     },
     {
-      id: 'usuarios',
-      title: 'Usuarios',
-      description: 'Checador de asistencia: registra tu ubicación (antes Usuarios.aspx).',
-      url: '/usuarios',
+      id: 'second-system-broken',
+      title: 'Second System Broken',
+      description:
+        'Segundo sistema en Angular: módulos de consulta, reporte consolidado con nuevo backend y comparativa.',
+      url: '/second-system-broken',
       external: false,
-      roles: ROLES_LECTURA,
-    },
-    {
-      // Es Angular, pero vive en /legacy/AngularPage dentro del marco de WebForms
-      id: 'salas',
-      title: 'Reservación de salas',
-      description: 'Agenda del día y reservación de salas de juntas (/legacy/AngularPage).',
-      url: enlacesLegacy(config.apps.legacyUrl).angularPage,
-      external: true,
       roles: ROLES_LECTURA,
     },
   ];

@@ -3,17 +3,7 @@ import { provideRouter } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { FakeAuthService } from '../../core/auth/testing/fake-auth.service';
-import { APP_CONFIG, AppConfig } from '../../core/config/app-config';
 import { Menu } from './menu';
-
-const config: AppConfig = {
-  oidc: { authority: 'http://kc/auth/realms/lab', clientId: 'frontend-spa', scope: 'openid' },
-  apiBaseUrl: '/api',
-  apps: {
-    taxesUrl: 'http://192.168.50.10/taxes/Home/Menu',
-    legacyUrl: 'http://192.168.50.10/legacy/Menu',
-  },
-};
 
 describe('Menu', () => {
   let auth: FakeAuthService;
@@ -39,11 +29,7 @@ describe('Menu', () => {
     auth.user.next({ userName: 'juan', name: 'Juan Pérez', roles: ['usuario'] });
     TestBed.configureTestingModule({
       imports: [Menu],
-      providers: [
-        provideRouter([]),
-        { provide: AuthService, useValue: auth },
-        { provide: APP_CONFIG, useValue: config },
-      ],
+      providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
     });
   });
 
@@ -51,24 +37,19 @@ describe('Menu', () => {
     expect((await pintar()).textContent).toContain('Juan Pérez');
   });
 
-  it('las apps legacy y Reservación de salas abren por URL; LEgFrontNEWBACK y Usuarios dentro de /newapp', async () => {
+  it('muestra únicamente los dos accesos a los menús Angular: System Principal y Second System Broken', async () => {
     expect(enlaces(await pintar())).toEqual({
-      'Abrir BrokenTaxes': 'http://192.168.50.10/taxes/Home/Menu',
-      'Abrir Legacy WebForms': 'http://192.168.50.10/legacy/Menu',
-      'Abrir LEgFrontNEWBACK': '/legfrontnewback',
-      'Abrir Usuarios': '/usuarios',
-      'Abrir Reservación de salas': 'http://192.168.50.10/legacy/AngularPage',
+      'Abrir System Principal': '/system-principal',
+      'Abrir Second System Broken': '/second-system-broken',
     });
   });
 
-  it('un invitado solo ve las vistas de /newapp', async () => {
-    auth.user.next({ userName: 'ana', name: 'ana', roles: ['invitado'] });
+  it('no muestra ninguna referencia a Legacy WebForms ni a BrokenTaxes', async () => {
+    const texto = (await pintar()).textContent ?? '';
 
-    expect(Object.keys(enlaces(await pintar()))).toEqual([
-      'Abrir LEgFrontNEWBACK',
-      'Abrir Usuarios',
-      'Abrir Reservación de salas',
-    ]);
+    expect(texto).not.toContain('Legacy WebForms');
+    expect(texto).not.toContain('BrokenTaxes');
+    expect(texto).not.toContain('IIS');
   });
 
   it('"Cerrar sesión" cierra la sesión de Keycloak', async () => {
