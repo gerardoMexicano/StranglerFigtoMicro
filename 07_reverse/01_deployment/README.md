@@ -381,6 +381,23 @@ Pendientes:
 - Quitar del realm las URLs de IIS Express (`LEGACY_*_DEV_URL`) cuando ya no se use.
 - Despliegue de `06_frontend` desde Jenkins.
 
+## Rutas legacy retiradas (`/rutas-retiradas`)
+
+El gateway ya no manda a IIS lo que empiece con `/legacy` (WebForms) ni `/taxes` (MVC, "Second System
+Broken"): responde 302 a `/rutas-retiradas?desde=<ruta>`, una página del propio gateway (410 Gone)
+con "Estas rutas ya no existen. Sentimos las molestias." y un botón **Volver al inicio** (`/` → `/newapp/`).
+Funciona para cualquier método, también POST.
+
+- Configuración: sección `RutasRetiradas` de `Gateway/appsettings.json`.
+  - `Prefijos`: se comparan por segmento (`/legacy` cubre `/legacy/...`, no `/legacyx`).
+  - `Excepciones`: páginas ya migradas a Angular que conservan su URL bajo `/legacy`
+    (`/legacy/AngularPage`, `/legacy/Usuarios`). Se comparan por prefijo, así que también cubren su `.aspx`.
+- Código: `Gateway/RutasRetiradas.cs`. Pruebas: `Gateway.Tests` (`dotnet test` en esa carpeta).
+- No afecta el login: Keycloak valida contra `legacy-auth` directo por la red de Docker, no por el gateway.
+  El logout front-channel de los clientes legacy cae en la página retirada dentro de su iframe oculto, sin efecto visible.
+- **Rollback:** `RutasRetiradas__Habilitado=false` en el servicio `gateway` del compose (o `"Habilitado": false`
+  en `appsettings.json`) y recrear el gateway: `/legacy` y `/taxes` vuelven al proxy hacia IIS como antes.
+
 ## Migración de usuarios al primer login
 
 ```
