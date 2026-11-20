@@ -19,6 +19,7 @@ del gateway YARP de [`07_reverse/01_deployment`](../07_reverse/01_deployment/REA
 | `/newapp/legfrontnewback` | Con sesión | Versión Angular de `LEgFrontNEWBACK.aspx`: las 5 tablas de ventas desde `05_backend` (`/api/sales/*`). |
 | `/newapp/usuarios` | Con sesión | Checador de Asistencia. **Reemplaza** a `Usuarios.aspx` (migración completa): ubica al usuario en un mapa Leaflet, registra el check-in en `05_backend` (`/api/attendance/check-ins`) y muestra sus últimos registros. `invitado` ve su ubicación pero no registra. |
 | `/newapp/salas` | Con sesión | Reservación de salas accesible directamente desde `System Principal` en `/newapp/salas`. |
+| `/legacy/Usuarios` | Con sesión | El mismo Checador de Asistencia en la URL de siempre: el gateway sirve esta app en lugar de `Usuarios.aspx` (`legacy-usuarios-route`), dentro del marco de WebForms. `/legacy/Usuarios.aspx` redirige (302) aquí. |
 
 | `/legacy/AngularPage` | Con sesión | Reservación de salas (funcionalidad nueva). Es **esta misma app**, pero el gateway la sirve en lugar de `AngularPage.aspx` dentro de un marco igual al `Site.Master` de WebForms: para el usuario sigue siendo una página de `/legacy`. Agenda del día por sala y reservación en bloques de 30 minutos contra `05_backend` (`/api/rooms`). `invitado` consulta pero no reserva. |
 

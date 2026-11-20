@@ -1,5 +1,7 @@
 <main class="pagina">
-  <a class="boton boton-texto" routerLink="/menu">← Volver al menú</a>
+  @if (!enMarcoLegacy) {
+    <a class="boton boton-texto" routerLink="/menu">← Volver al menú</a>
+  }
 
   <h1>Checador de Asistencia</h1>
   <p class="resumen">Registra tu ubicación actual para confirmar tu asistencia.</p>
