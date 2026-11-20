@@ -32,6 +32,14 @@ location / {
     set $gateway http://gateway:8080;
     proxy_pass $gateway;
 
+    # Cargas masivas de XML (/api/taxes/xml-batch y /api/reports/cfdi-pdf-batch, hasta 5000
+    # archivos): con el límite por defecto (1m) nginx respondería 413. Debe coincidir con
+    # MaxRequestBodySize del gateway y BulkUploadLimits del backend (200 MB).
+    client_max_body_size 200m;
+    # Generar el ZIP de miles de PDFs o insertar miles de nóminas puede pasar del minuto por defecto
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+
     # Las apps legacy (OWIN) responden al login con la cookie de sesión, que lleva
     # claims + id_token cifrados (varios KB): con el buffer por defecto (4-8k) nginx da 502
     proxy_buffer_size 128k;

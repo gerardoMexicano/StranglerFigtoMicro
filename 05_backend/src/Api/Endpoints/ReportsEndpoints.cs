@@ -35,6 +35,7 @@ public sealed class ReportsEndpoints : IEndpoint
         })
         .RequireAuthorization("Lectura")
         .DisableAntiforgery()
+        .WithBulkXmlUploadLimits()
         .WithName("GenerateCfdiPdfBatch")
         .WithSummary("Lee uno o varios archivos XML CFDI 4.0, genera un PDF por cada factura válida (Reporte_<UUID>.pdf) y devuelve el archivo ZIP.")
         .Produces(StatusCodes.Status200OK, contentType: "application/zip")

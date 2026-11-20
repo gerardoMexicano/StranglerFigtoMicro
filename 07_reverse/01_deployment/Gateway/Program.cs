@@ -2,6 +2,13 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Cargas masivas de XML (/api/taxes/xml-batch y /api/reports/cfdi-pdf-batch, hasta 5000 archivos):
+// Kestrel corta en 30 MB por defecto y el gateway respondería 413 antes de pasar la petición.
+// Debe coincidir con client_max_body_size de nginx (sitio.inc.template) y con
+// BulkUploadLimits del backend (05_backend). Cada destino sigue aplicando su propio límite.
+builder.WebHost.ConfigureKestrel(options =>
+    options.Limits.MaxRequestBodySize = 200L * 1024 * 1024);
+
 builder.Services
     .AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
