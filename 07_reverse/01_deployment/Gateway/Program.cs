@@ -6,6 +6,8 @@ builder.Services
     .AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
+builder.Services.AddRutasRetiradas(builder.Configuration);
+
 // nginx termina TLS y llama al gateway por http. Sin esto YARP le diría a los destinos
 // "X-Forwarded-Proto: http" aunque el navegador esté en https, y las apps legacy armarían
 // URLs y cookies como si no lo estuviera.
@@ -23,6 +25,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+// /legacy y /taxes retirados: van a /rutas-retiradas antes de llegar al proxy (ver RutasRetiradas.cs).
+app.UseRutasRetiradas();
+app.MapRutasRetiradas();
 
 // La raíz lleva a la app nueva (06_frontend). 302 y no 301: el navegador no la guarda en caché
 // y la entrada se puede mover sin que los usuarios queden atados al destino viejo.
