@@ -280,6 +280,26 @@ public sealed class TaxesEndpointsTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task UploadXmlBatch_WithMoreFilesThanDefaultFormValueCountLimit_ShouldReturn200Ok()
+    {
+        // FormOptions.ValueCountLimit vale 1024 por defecto y también cuenta archivos:
+        // sin ampliarlo, un lote grande truena (500) antes de llegar al handler.
+        const int fileCount = 1500;
+        using var client = CreateAuthenticatedClient("usuario");
+        var files = Enumerable.Range(1, fileCount)
+            .Select(i => ($"nomina{i}.xml", SamplePayrollXml))
+            .ToArray();
+        using var content = CreateMultipartXmlContent(files);
+
+        var response = await client.PostAsync("/api/taxes/xml-batch", content);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<BulkXmlUploadResultDto>();
+        Assert.NotNull(payload);
+        Assert.Equal(fileCount, payload.ReceivedCount);
+    }
+
     private static MultipartFormDataContent CreateMultipartXmlContent(params (string FileName, string Xml)[] files)
     {
         var content = new MultipartFormDataContent();

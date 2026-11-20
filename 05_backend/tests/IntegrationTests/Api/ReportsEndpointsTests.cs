@@ -92,6 +92,26 @@ public sealed class ReportsEndpointsTests : IClassFixture<WebApplicationFactory<
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GenerateCfdiPdfBatch_WithMoreFilesThanDefaultFormValueCountLimit_ShouldReturn200Ok()
+    {
+        // FormOptions.ValueCountLimit vale 1024 por defecto y también cuenta archivos:
+        // sin ampliarlo, un lote grande truena (500) antes de llegar al handler.
+        const int fileCount = 1500;
+        using var client = CreateAuthenticatedClient("usuario");
+        var files = Enumerable.Range(1, fileCount)
+            .Select(i => ($"factura{i}.xml", SampleCfdi40Xml))
+            .ToArray();
+        using var content = CreateMultipartXmlContent(files);
+
+        var response = await client.PostAsync("/api/reports/cfdi-pdf-batch", content);
+
+        Assert.True(
+            response.StatusCode == HttpStatusCode.OK,
+            $"{response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        Assert.Equal(fileCount.ToString(), response.Headers.GetValues("X-Received-Count").Single());
+    }
+
     private static MultipartFormDataContent CreateMultipartXmlContent(params (string FileName, string Xml)[] files)
     {
         var content = new MultipartFormDataContent();
