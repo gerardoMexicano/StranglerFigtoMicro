@@ -3,11 +3,13 @@ using Application.Common.Models;
 using Application.Features.Attendance.Commands;
 using Application.Features.Attendance.Dtos;
 using Application.Features.Attendance.Queries;
+using Application.Features.Reports;
 using Application.Features.RoomBookings.Commands;
 using Application.Features.RoomBookings.Dtos;
 using Application.Features.RoomBookings.Queries;
 using Application.Features.Sales.Dtos;
 using Application.Features.Sales.Queries;
+using Application.Features.Taxes.Commands;
 using Application.Features.Taxes.Dtos;
 using Application.Features.Taxes.Queries;
 using Application.Features.Users.GetCurrentUser;
@@ -28,9 +30,14 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetOrderLinesQuery, PagedResult<OrderLineDto>>, GetOrderLinesQueryHandler>();
         services.AddScoped<IQueryHandler<GetOrdersQuery, PagedResult<OrderDto>>, GetOrdersQueryHandler>();
 
-        // Casos de uso extraídos de /taxes/Home/PaginaAntiguaNuevoBackend y /taxes/Home/PaginaAngular
+        // Casos de uso extraídos de /taxes/PaginaAntigua, /taxes/Home/PaginaAntiguaNuevoBackend y /taxes/Home/PaginaAngular
         services.AddScoped<IQueryHandler<GetConsolidatedReportQuery, PagedResult<ConsolidatedReportItemDto>>, GetConsolidatedReportQueryHandler>();
+        services.AddScoped<IQueryHandler<GetPayrollSummaryQuery, PayrollSummaryReportDto>, GetPayrollSummaryQueryHandler>();
+        services.AddScoped<ICommandHandler<UploadBulkXmlCommand, BulkXmlUploadResultDto>, UploadBulkXmlCommandHandler>();
         services.AddScoped<IQueryHandler<GetSeismicComparisonQuery, SeismicComparisonResultDto>, GetSeismicComparisonQueryHandler>();
+
+        // Reportes CFDI 4.0 -> PDF en ZIP extraído de /legacy/Reportes.aspx
+        services.AddScoped<ICommandHandler<GenerateCfdiPdfBatchCommand, CfdiPdfBatchResultDto>, GenerateCfdiPdfBatchCommandHandler>();
 
         // Checador de Asistencia migrado de /legacy/Usuarios.aspx
         services.AddScoped<ICommandHandler<RegisterCheckInCommand, CheckInDto>, RegisterCheckInCommandHandler>();

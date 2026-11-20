@@ -72,7 +72,7 @@ Este contenedor **no** almacena secretos ni URLs en `appsettings.json`. En su lu
 | `KC_API_CLIENT_ID` | `Oidc__Audience` | No *(Default: `backend-api`)* | Audiencia (`aud`) requerida en los access tokens emitidos por Keycloak. |
 | `BACKEND_DB_CONNECTION` *(si falta, `LEGACY_DB_CONNECTION`)* | `ConnectionStrings__DefaultConnection` | Sí | Cadena de conexión a SQL Server (`Laboratory`) usada por `SqlConnectionFactory`. `CheckInRepository` inserta en `dbo.asistencias`: el login necesita `INSERT` (p. ej. `app_escritor`); con `app_lector` el `POST /api/attendance/check-ins` responde 500. `RoomBookingRepository` lee `dbo.salas` y escribe en `dbo.reservaciones` (`sqlserver/db/06_salas.sql`): `SELECT`, `INSERT` y `DELETE`. |
 | `WWI_DB_CONNECTION` | `ConnectionStrings__WideWorldImporters` | Sí | Cadena de conexión dedicada a `WideWorldImporters` usada por `WwiSqlConnectionFactory` y `SalesReadRepository` (extracción de `/legacy/LEgFrontNEWBACK`). |
-| `TAXES_DB_CONNECTION` | `ConnectionStrings__TaxesProto` | Sí | Cadena de conexión dedicada a `taxes_proto` usada por `TaxesSqlConnectionFactory` y `TaxesReadRepository` (extracción de `/taxes/Home/PaginaAntiguaNuevoBackend`). |
+| `TAXES_DB_CONNECTION` | `ConnectionStrings__TaxesProto` | Sí | Cadena de conexión dedicada a `taxes_proto` usada por `TaxesSqlConnectionFactory`, `TaxesReadRepository` y `TaxesWriteRepository` (`/taxes/PaginaAntigua` y `/taxes/Home/PaginaAntiguaNuevoBackend`). La carga masiva `POST /api/taxes/xml-batch` requiere un login con `INSERT` (p. ej. `app_escritor`). |
 
 ---
 
@@ -133,7 +133,10 @@ docker compose --env-file ../07_reverse/01_deployment/.env.development down
 | `GET` | `/api/sales/order-lines` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.OrderLines`. |
 | `GET` | `/api/sales/orders` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) de `WideWorldImporters.Sales.Orders`. |
 | `GET` | `/api/taxes/consolidated-report` | `Bearer` + política `Lectura` | Consulta paginada (`startDate`, `endDate`, `page=1`, `pageSize=50`) del Reporte Masivo Consolidado (`CfdiCore` + `CfdiComplemento` + `NominaResumen` + `NominaMovimiento`) en `taxes_proto`. |
+| `GET` | `/api/taxes/payroll-summary` | `Bearer` + política `Lectura` | Dashboard de Nómina (`PaginaAntigua/Index`): KPIs globales (`granTotalPercepciones`, `granTotalDeducciones`, `granTotalNeto`, `totalRecibos`), costo agrupado por departamento y listado de recibos filtrado por `startDate` y `endDate`. |
+| `POST` | `/api/taxes/xml-batch` | `Bearer` + política `UsuarioOrAdmin` | Carga masiva (`multipart/form-data`, hasta 5,000 archivos XML CFDI 4.0 de nómina) e inserción idempotente por `UUID` en `CfdiCore`, `CfdiComplemento`, `NominaResumen` y `NominaMovimiento`. |
 | `GET` | `/api/taxes/seismic-geojson` | `Bearer` + política `Lectura` | Generación y filtrado determinista de sismos GeoJSON (`count=5000`, `minMagnitude=1.0`, `seed=2026`) para la comparativa con convivencia de implementaciones en `/taxes/Home/PaginaAngular`. |
+| `POST` | `/api/reports/cfdi-pdf-batch` | `Bearer` + política `Lectura` | Recibe archivos XML CFDI 4.0 (`multipart/form-data`), genera un archivo PDF 1.4 (`Reporte_<UUID>.pdf`) por cada factura válida sin dependencias de terceros de pago y devuelve `ReportesGenerados.zip` (`application/zip`) con cabeceras `X-Received-Count`, `X-Valid-Count` y `X-Invalid-Count`. |
 | `POST` | `/api/attendance/check-ins` | `Bearer` + política `UsuarioOrAdmin` | Registra un check-in del Checador de Asistencia (`{ latitude, longitude, accuracyMeters }`) a nombre del `sub` del token. `201` con el registro; `400` si falta un campo o está fuera de rango. |
 | `GET` | `/api/attendance/check-ins/mine` | `Bearer` + política `Lectura` | Últimos check-ins de quien llama (`take=10`, máximo 50), del más reciente al más antiguo. |
 
