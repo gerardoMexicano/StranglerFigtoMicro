@@ -1,76 +1,49 @@
-import { AppConfig } from '../../core/config/app-config';
 import { buildMenuOptions, filterByRole, MenuOption } from './menu-options';
 
-// URLs distintas a las de producción: prueban que salen de config.json y no del código
-const config: AppConfig = {
-  oidc: { authority: 'http://kc/auth/realms/lab', clientId: 'frontend-spa', scope: 'openid' },
-  apiBaseUrl: '/api',
-  apps: {
-    taxesUrl: 'http://otro-host/taxes/Home/Menu',
-    legacyUrl: 'http://otro-host/legacy/Menu',
-  },
-};
-
 describe('buildMenuOptions', () => {
-  it('arma las cinco opciones en orden: taxes, legacy, legfrontnewback, usuarios y salas', () => {
-    expect(buildMenuOptions(config).map((o) => o.id)).toEqual([
-      'taxes',
-      'legacy',
-      'legfrontnewback',
-      'usuarios',
-      'salas',
+  it('arma los dos accesos a los nuevos menús en Angular: system-principal y second-system-broken', () => {
+    expect(buildMenuOptions().map((o) => o.id)).toEqual([
+      'system-principal',
+      'second-system-broken',
     ]);
   });
 
-  it('taxes y legacy salen de Angular hacia las URLs de config.json', () => {
-    const [taxes, legacy] = buildMenuOptions(config);
+  it('ambos accesos son rutas internas de Angular sin referencias a legacy ni taxes', () => {
+    const [systemPrincipal, secondSystemBroken] = buildMenuOptions();
 
-    expect(taxes).toMatchObject({ url: 'http://otro-host/taxes/Home/Menu', external: true });
-    expect(legacy).toMatchObject({ url: 'http://otro-host/legacy/Menu', external: true });
-  });
-
-  it('legfrontnewback es una ruta interna de /newapp', () => {
-    const legfrontnewback = buildMenuOptions(config)[2];
-
-    expect(legfrontnewback).toMatchObject({ url: '/legfrontnewback', external: false });
-  });
-
-  it('usuarios es una ruta interna de /newapp: ya no abre Usuarios.aspx', () => {
-    const usuarios = buildMenuOptions(config)[3];
-
-    expect(usuarios).toMatchObject({ url: '/usuarios', external: false });
-  });
-
-  it('salas abre /legacy/AngularPage junto al menú legacy de config.json: es Angular dentro de WebForms', () => {
-    const salas = buildMenuOptions(config)[4];
-
-    expect(salas).toMatchObject({ url: 'http://otro-host/legacy/AngularPage', external: true });
+    expect(systemPrincipal).toMatchObject({
+      title: 'System Principal',
+      url: '/system-principal',
+      external: false,
+    });
+    expect(secondSystemBroken).toMatchObject({
+      title: 'Second System Broken',
+      url: '/second-system-broken',
+      external: false,
+    });
   });
 
   it('cada opción tiene título y descripción para la tarjeta', () => {
-    for (const opcion of buildMenuOptions(config)) {
+    for (const opcion of buildMenuOptions()) {
       expect(opcion.title.trim()).not.toBe('');
       expect(opcion.description.trim()).not.toBe('');
     }
   });
 
-  it('las apps legacy son para usuario y admin; las vistas de /newapp también para invitado', () => {
-    expect(Object.fromEntries(buildMenuOptions(config).map((o) => [o.id, o.roles]))).toEqual({
-      taxes: ['usuario', 'admin'],
-      legacy: ['usuario', 'admin'],
-      legfrontnewback: ['usuario', 'admin', 'invitado'],
-      usuarios: ['usuario', 'admin', 'invitado'],
-      salas: ['usuario', 'admin', 'invitado'],
+  it('ambos menús están disponibles para usuario, admin e invitado', () => {
+    expect(Object.fromEntries(buildMenuOptions().map((o) => [o.id, o.roles]))).toEqual({
+      'system-principal': ['usuario', 'admin', 'invitado'],
+      'second-system-broken': ['usuario', 'admin', 'invitado'],
     });
   });
 
   it.each([
-    [['usuario'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios', 'salas']],
-    [['admin'], ['taxes', 'legacy', 'legfrontnewback', 'usuarios', 'salas']],
-    [['invitado'], ['legfrontnewback', 'usuarios', 'salas']],
+    [['usuario'], ['system-principal', 'second-system-broken']],
+    [['admin'], ['system-principal', 'second-system-broken']],
+    [['invitado'], ['system-principal', 'second-system-broken']],
     [[], []],
   ])('con roles %j ve %j', (roles, ids) => {
-    expect(filterByRole(buildMenuOptions(config), roles).map((o) => o.id)).toEqual(ids);
+    expect(filterByRole(buildMenuOptions(), roles).map((o) => o.id)).toEqual(ids);
   });
 });
 
@@ -85,29 +58,27 @@ describe('filterByRole', () => {
   });
 
   const opciones = [
-    opcion('taxes', []),
-    opcion('legacy', ['admin']),
-    opcion('legfrontnewback', ['admin', 'usuario']),
+    opcion('system-principal', []),
+    opcion('second-system-broken', ['admin', 'usuario']),
   ];
 
   it('una opción sin roles la ve cualquiera', () => {
-    expect(filterByRole(opciones, ['invitado']).map((o) => o.id)).toEqual(['taxes']);
+    expect(filterByRole(opciones, ['invitado']).map((o) => o.id)).toEqual(['system-principal']);
   });
 
   it('una opción con roles solo la ve quien tenga alguno de ellos', () => {
     expect(filterByRole(opciones, ['usuario']).map((o) => o.id)).toEqual([
-      'taxes',
-      'legfrontnewback',
+      'system-principal',
+      'second-system-broken',
     ]);
     expect(filterByRole(opciones, ['admin']).map((o) => o.id)).toEqual([
-      'taxes',
-      'legacy',
-      'legfrontnewback',
+      'system-principal',
+      'second-system-broken',
     ]);
   });
 
   it('no altera la lista original', () => {
     filterByRole(opciones, []);
-    expect(opciones).toHaveLength(3);
+    expect(opciones).toHaveLength(2);
   });
 });

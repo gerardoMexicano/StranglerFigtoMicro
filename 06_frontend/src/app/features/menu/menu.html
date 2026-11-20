@@ -16,11 +16,7 @@
       <li class="tarjeta">
         <h2>{{ opcion.title }}</h2>
         <p>{{ opcion.description }}</p>
-        @if (opcion.external) {
-          <a class="boton" [href]="opcion.url">Abrir {{ opcion.title }}</a>
-        } @else {
-          <a class="boton" [routerLink]="opcion.url">Abrir {{ opcion.title }}</a>
-        }
+        <a class="boton" [routerLink]="opcion.url">Abrir {{ opcion.title }}</a>
       </li>
     }
   </ul>

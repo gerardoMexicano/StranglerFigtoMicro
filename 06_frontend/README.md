@@ -7,9 +7,18 @@ del gateway YARP de [`07_reverse/01_deployment`](../07_reverse/01_deployment/REA
 | Ruta | Acceso | Qué hace |
 | :--- | :--- | :--- |
 | `/newapp/` | Pública | Presentación con el botón *Entrar*, que lleva al login de Keycloak. |
-| `/newapp/menu` | Con sesión | Menú hacia BrokenTaxes (`/taxes`, MVC), Legacy WebForms (`/legacy`), LEgFrontNEWBACK y Usuarios. |
-| `/newapp/legfrontnewback` | Con sesión | Versión Angular de `LEgFrontNEWBACK.aspx`: las 5 tablas de ventas desde `05_backend` (`/api/sales/*`). La página WebForms sigue siendo la oficial. |
+| `/newapp/menu` | Con sesión | Menú de bienvenida en Angular con acceso a los dos submenús: **System Principal** (`/newapp/system-principal`) y **Second System Broken** (`/newapp/second-system-broken`). |
+| `/newapp/system-principal` | Con sesión | Menú Angular que reemplaza al menú principal anterior, con sus 7 accesos: Reportes, Usuarios (`/newapp/usuarios`), Configuración, Dashboard, Second System Broken (`/newapp/second-system-broken`), Reservación de salas (`/newapp/salas`) y LEgFrontNEWBACK (`/newapp/legfrontnewback`). |
+| `/newapp/system-principal/reportes` | Con sesión | Hoja vacía en Angular para Reportes. |
+| `/newapp/system-principal/configuracion` | Con sesión | Hoja vacía en Angular para Configuración. |
+| `/newapp/system-principal/dashboard` | Con sesión | Hoja vacía en Angular para Dashboard. |
+| `/newapp/second-system-broken` | Con sesión | Menú Angular que reemplaza al segundo menú anterior, con sus 4 accesos: Página Antigua, Página Antigua (Nuevo Backend), Página en Angular y Página Principal (`/newapp/system-principal`). |
+| `/newapp/second-system-broken/pagina-antigua` | Con sesión | Hoja vacía en Angular para Página Antigua. |
+| `/newapp/second-system-broken/pagina-antigua-nuevo-backend` | Con sesión | Hoja vacía en Angular para Página Antigua (Nuevo Backend). |
+| `/newapp/second-system-broken/pagina-angular` | Con sesión | Hoja vacía en Angular para Página en Angular. |
+| `/newapp/legfrontnewback` | Con sesión | Versión Angular de `LEgFrontNEWBACK.aspx`: las 5 tablas de ventas desde `05_backend` (`/api/sales/*`). |
 | `/newapp/usuarios` | Con sesión | Checador de Asistencia. **Reemplaza** a `Usuarios.aspx` (migración completa): ubica al usuario en un mapa Leaflet, registra el check-in en `05_backend` (`/api/attendance/check-ins`) y muestra sus últimos registros. `invitado` ve su ubicación pero no registra. |
+| `/newapp/salas` | Con sesión | Reservación de salas accesible directamente desde `System Principal` en `/newapp/salas`. |
 
 | `/legacy/AngularPage` | Con sesión | Reservación de salas (funcionalidad nueva). Es **esta misma app**, pero el gateway la sirve en lugar de `AngularPage.aspx` dentro de un marco igual al `Site.Master` de WebForms: para el usuario sigue siendo una página de `/legacy`. Agenda del día por sala y reservación en bloques de 30 minutos contra `05_backend` (`/api/rooms`). `invitado` consulta pero no reserva. |
 

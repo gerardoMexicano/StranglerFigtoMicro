@@ -3,10 +3,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
-import { APP_CONFIG } from '../../core/config/app-config';
 import { buildMenuOptions, filterByRole } from './menu-options';
 
-/** Menú de /newapp: solo redirige; las apps legacy siguen desplegadas como siempre. */
+/** Menú de bienvenida en /newapp/menu: da acceso a los dos submenús en Angular (System Principal y Second System Broken). */
 @Component({
   selector: 'app-menu',
   imports: [RouterLink],
@@ -15,7 +14,7 @@ import { buildMenuOptions, filterByRole } from './menu-options';
 })
 export class Menu {
   private readonly auth = inject(AuthService);
-  private readonly todas = buildMenuOptions(inject(APP_CONFIG));
+  private readonly todas = buildMenuOptions();
 
   protected readonly usuario = toSignal(this.auth.user$, { initialValue: null });
 
