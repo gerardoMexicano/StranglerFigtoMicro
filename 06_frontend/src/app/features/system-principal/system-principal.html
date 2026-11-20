@@ -1,0 +1,26 @@
+<main class="pagina">
+  <a class="boton boton-texto" routerLink="/menu">← Volver al menú</a>
+
+  <header class="encabezado">
+    <div>
+      <h1>System Principal</h1>
+      @if (usuario(); as u) {
+        <p class="bienvenida">
+          Bienvenido, <strong>{{ u.name }}</strong>
+        </p>
+      }
+    </div>
+    <button type="button" class="boton boton-secundario" (click)="salir()">Cerrar sesión</button>
+  </header>
+
+  <ul class="tarjetas">
+    @for (opcion of opciones; track opcion.id) {
+      <li class="tarjeta">
+        <div class="icono" aria-hidden="true">{{ opcion.icon }}</div>
+        <h2>{{ opcion.title }}</h2>
+        <p>{{ opcion.description }}</p>
+        <a class="boton" [routerLink]="opcion.url">{{ opcion.buttonLabel }}</a>
+      </li>
+    }
+  </ul>
+</main>

@@ -11,4 +11,16 @@ public interface ITaxesReadRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PayrollReceiptItemDto>> GetPayrollReceiptsAsync(
+        DateTime? startDate,
+        DateTime? endDate,
+        CancellationToken cancellationToken = default);
+}
+
+public interface ITaxesWriteRepository
+{
+    Task<int> UpsertBatchAsync(
+        IReadOnlyList<ParsedCfdiCoreRecord> records,
+        CancellationToken cancellationToken = default);
 }

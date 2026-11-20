@@ -18,6 +18,66 @@ export const routes: Routes = [
     loadComponent: () => import('./features/menu/menu').then((m) => m.Menu),
   },
   {
+    path: 'system-principal',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/system-principal/system-principal').then((m) => m.SystemPrincipal),
+  },
+  {
+    path: 'system-principal/reportes',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/system-principal/pages/reportes').then((m) => m.Reportes),
+  },
+  {
+    path: 'system-principal/configuracion',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/system-principal/pages/configuracion').then((m) => m.Configuracion),
+  },
+  {
+    path: 'system-principal/dashboard',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/system-principal/pages/dashboard').then((m) => m.Dashboard),
+  },
+  {
+    path: 'second-system-broken',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/second-system-broken/second-system-broken').then(
+        (m) => m.SecondSystemBroken,
+      ),
+  },
+  {
+    path: 'second-system-broken/pagina-antigua',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/second-system-broken/pages/pagina-antigua').then((m) => m.PaginaAntigua),
+  },
+  {
+    path: 'second-system-broken/pagina-antigua-nuevo-backend',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/second-system-broken/pages/pagina-antigua-nuevo-backend').then(
+        (m) => m.PaginaAntiguaNuevoBackend,
+      ),
+  },
+  {
+    path: 'second-system-broken/pagina-angular',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () =>
+      import('./features/second-system-broken/pages/pagina-angular').then((m) => m.PaginaAngular),
+  },
+  {
     path: 'legfrontnewback',
     canActivate: [authGuard, roleGuard],
     data: { roles: ROLES_LECTURA },
@@ -25,11 +85,18 @@ export const routes: Routes = [
       import('./features/legfrontnewback/legfrontnewback').then((m) => m.Legfrontnewback),
   },
   {
-    // Reemplaza /legacy/Usuarios.aspx (Checador de Asistencia); invitado entra a ver, no registra
+    // Reemplaza Usuarios (Checador de Asistencia); invitado entra a ver, no registra
     path: 'usuarios',
     canActivate: [authGuard, roleGuard],
     data: { roles: ROLES_LECTURA },
     loadComponent: () => import('./features/usuarios/usuarios').then((m) => m.Usuarios),
+  },
+  {
+    // Reservación de salas accesible directamente en /newapp/salas desde System Principal
+    path: 'salas',
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ROLES_LECTURA },
+    loadComponent: () => import('./features/salas/salas').then((m) => m.Salas),
   },
   {
     path: 'sin-acceso',

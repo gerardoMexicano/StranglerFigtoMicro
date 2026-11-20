@@ -1,6 +1,8 @@
+using System.Text;
 using Api.Extensions;
 using Application.Common.Messaging;
 using Application.Common.Models;
+using Application.Features.Taxes.Commands;
 using Application.Features.Taxes.Dtos;
 using Application.Features.Taxes.Queries;
 
@@ -14,8 +16,7 @@ public sealed class TaxesEndpoints : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/taxes")
-            .WithTags("Taxes (PaginaAntiguaNuevoBackend)")
-            .RequireAuthorization("Lectura");
+            .WithTags("Taxes (PaginaAntigua y PaginaAntiguaNuevoBackend)");
 
         group.MapGet("/consolidated-report", async (
             DateTime? startDate,
@@ -34,11 +35,49 @@ public sealed class TaxesEndpoints : IEndpoint
             var result = await handler.HandleAsync(query, cancellationToken);
             return result.IsSuccess ? TypedResults.Ok(result.Value) : result.ToProblemDetails();
         })
+        .RequireAuthorization("Lectura")
         .WithName("GetTaxesConsolidatedReport")
         .WithSummary("Consulta paginada del Reporte Masivo Consolidado (CfdiCore + Complementos + Nómina) en taxes_proto por rango de fechas.")
         .Produces<PagedResult<ConsolidatedReportItemDto>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/payroll-summary", async (
+            DateTime? startDate,
+            DateTime? endDate,
+            IQueryHandler<GetPayrollSummaryQuery, PayrollSummaryReportDto> handler,
+            CancellationToken cancellationToken) =>
+        {
+            var query = new GetPayrollSummaryQuery(startDate, endDate);
+            var result = await handler.HandleAsync(query, cancellationToken);
+            return result.IsSuccess ? TypedResults.Ok(result.Value) : result.ToProblemDetails();
+        })
+        .RequireAuthorization("Lectura")
+        .WithName("GetTaxesPayrollSummary")
+        .WithSummary("Dashboard de Nómina (PaginaAntigua/Index): KPIs, costo por departamento y listado de recibos.")
+        .Produces<PayrollSummaryReportDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
+
+        group.MapPost("/xml-batch", async (
+            HttpRequest request,
+            ICommandHandler<UploadBulkXmlCommand, BulkXmlUploadResultDto> handler,
+            CancellationToken cancellationToken) =>
+        {
+            var files = await ReadUploadedFilesAsync(request, cancellationToken);
+            var result = await handler.HandleAsync(new UploadBulkXmlCommand(files), cancellationToken);
+            return result.IsSuccess ? TypedResults.Ok(result.Value) : result.ToProblemDetails();
+        })
+        .RequireAuthorization("UsuarioOrAdmin")
+        .DisableAntiforgery()
+        .WithBulkXmlUploadLimits()
+        .WithName("UploadTaxesXmlBatch")
+        .WithSummary("Carga masiva de hasta 5000 archivos XML CFDI 4.0 de nómina a CfdiCore, CfdiComplemento, NominaResumen y NominaMovimiento.")
+        .Produces<BulkXmlUploadResultDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapGet("/seismic-geojson", async (
             int? count,
@@ -55,11 +94,39 @@ public sealed class TaxesEndpoints : IEndpoint
             var result = await handler.HandleAsync(query, cancellationToken);
             return result.IsSuccess ? TypedResults.Ok(result.Value) : result.ToProblemDetails();
         })
+        .RequireAuthorization("Lectura")
         .WithName("GetSeismicGeoJson")
         .WithSummary("Generación y procesamiento determinista de puntos sísmicos GeoJSON para la comparativa de rendimiento en /taxes/Home/PaginaAngular.")
         .Produces<SeismicComparisonResultDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .ProducesProblem(StatusCodes.Status403Forbidden);
+    }
+
+    internal static async Task<IReadOnlyList<XmlFilePayload>> ReadUploadedFilesAsync(
+        HttpRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!request.HasFormContentType)
+        {
+            return [];
+        }
+
+        var form = await request.ReadFormAsync(cancellationToken);
+        if (form.Files.Count == 0)
+        {
+            return [];
+        }
+
+        var list = new List<XmlFilePayload>(form.Files.Count);
+        foreach (var file in form.Files)
+        {
+            using var stream = file.OpenReadStream();
+            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            var content = await reader.ReadToEndAsync(cancellationToken);
+            list.Add(new XmlFilePayload(file.FileName, content));
+        }
+
+        return list;
     }
 }

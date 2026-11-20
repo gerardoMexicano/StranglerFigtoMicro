@@ -2,9 +2,18 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Cargas masivas de XML (/api/taxes/xml-batch y /api/reports/cfdi-pdf-batch, hasta 5000 archivos):
+// Kestrel corta en 30 MB por defecto y el gateway respondería 413 antes de pasar la petición.
+// Debe coincidir con client_max_body_size de nginx (sitio.inc.template) y con
+// BulkUploadLimits del backend (05_backend). Cada destino sigue aplicando su propio límite.
+builder.WebHost.ConfigureKestrel(options =>
+    options.Limits.MaxRequestBodySize = 200L * 1024 * 1024);
+
 builder.Services
     .AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+builder.Services.AddRutasRetiradas(builder.Configuration);
 
 // nginx termina TLS y llama al gateway por http. Sin esto YARP le diría a los destinos
 // "X-Forwarded-Proto: http" aunque el navegador esté en https, y las apps legacy armarían
@@ -23,6 +32,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+// /legacy y /taxes retirados: van a /rutas-retiradas antes de llegar al proxy (ver RutasRetiradas.cs).
+app.UseRutasRetiradas();
+app.MapRutasRetiradas();
 
 // La raíz lleva a la app nueva (06_frontend). 302 y no 301: el navegador no la guarda en caché
 // y la entrada se puede mover sin que los usuarios queden atados al destino viejo.

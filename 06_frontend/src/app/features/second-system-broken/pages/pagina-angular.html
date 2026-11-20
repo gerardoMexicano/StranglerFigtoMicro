@@ -1,0 +1,91 @@
+<main class="pagina">
+  <a class="boton boton-texto" routerLink="/second-system-broken"
+    >← Volver a Second System Broken</a
+  >
+
+  <h1>Procesamiento de Sismos (GeoJSON) en .NET 10</h1>
+  <p class="resumen">
+    Generación determinista de sismos validada y procesada por el backend moderno. La comparativa
+    contra .NET Framework 4.8 sigue disponible en la página MVC.
+  </p>
+  <p class="origen">Endpoint: <code>/api/taxes/seismic-geojson</code> (Kestrel + JWT)</p>
+
+  <form class="controles" (ngSubmit)="ejecutar()">
+    <label>
+      Cantidad (1 - 10,000)
+      <input type="number" name="count" step="500" [(ngModel)]="count" />
+    </label>
+    <label>
+      Magnitud mínima (0 - 10)
+      <input type="number" name="minMagnitude" step="0.5" [(ngModel)]="minMagnitude" />
+    </label>
+    <label>
+      Semilla determinista
+      <input type="number" name="seed" [(ngModel)]="seed" />
+    </label>
+    <button type="submit" class="boton" [disabled]="respuesta.isLoading()">Ejecutar</button>
+  </form>
+
+  @if (error(); as mensaje) {
+    <p class="aviso-error" role="alert">{{ mensaje }}</p>
+  }
+
+  <section class="panel" aria-label="Resultado .NET 10">
+    <h2>{{ datos()?.resultado?.engine ?? 'Backend .NET 10' }}</h2>
+
+    <dl class="metricas">
+      <div>
+        <dt>Tiempo HTTP / Servidor</dt>
+        <dd>
+          @if (datos(); as d) {
+            {{ d.ms }} ms (Srv: {{ d.resultado.serverElapsedMs }} ms)
+          } @else {
+            -- ms
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Estado HTTP</dt>
+        <dd>
+          @if (datos()) {
+            HTTP 200
+          } @else {
+            --
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Sismos / Mag. promedio</dt>
+        <dd>
+          @if (datos(); as d) {
+            {{ d.resultado.returnedCount }} pts (Ø {{ d.resultado.averageMagnitude }})
+          } @else {
+            --
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Magnitud máxima</dt>
+        <dd>{{ datos()?.resultado?.maxMagnitude ?? '--' }}</dd>
+      </div>
+      <div>
+        <dt>Memoria asignada</dt>
+        <dd>
+          {{ datos()?.resultado?.memoryMegabytes ?? '--' }} MB
+          <span class="barra" aria-hidden="true"
+            ><span [style.width.%]="barraMemoria()"></span
+          ></span>
+        </dd>
+      </div>
+    </dl>
+
+    <div class="mapa">
+      <app-mapa-sismos [puntos]="puntos()" />
+      @if (!ejecutado()) {
+        <p class="estado-mapa" role="status">Esperando ejecución...</p>
+      } @else if (respuesta.isLoading()) {
+        <p class="estado-mapa" role="status">Consultando backend .NET 10...</p>
+      }
+    </div>
+  </section>
+</main>
