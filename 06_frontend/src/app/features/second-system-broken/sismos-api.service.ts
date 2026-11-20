@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -42,10 +42,16 @@ export interface ResultadoSismos {
 @Injectable({ providedIn: 'root' })
 export class SismosApiService {
   private readonly http = inject(HttpClient);
-  private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
+  private readonly url = `${inject(APP_CONFIG).apiBaseUrl.replace(/\/+$/, '')}/taxes/seismic-geojson`;
 
-  consultar(_consulta: ConsultaSismos): Observable<ResultadoSismos> {
-    // Fase Red (TDD): contrato mínimo, la implementación llega tras aprobar las pruebas
-    throw new Error('Sin implementar');
+  consultar(consulta: ConsultaSismos): Observable<ResultadoSismos> {
+    const params = new HttpParams({
+      fromObject: {
+        count: consulta.count,
+        minMagnitude: consulta.minMagnitude,
+        seed: consulta.seed,
+      },
+    });
+    return this.http.get<ResultadoSismos>(this.url, { params });
   }
 }

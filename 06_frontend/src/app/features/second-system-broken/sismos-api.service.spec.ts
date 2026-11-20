@@ -81,9 +81,7 @@ describe('SismosApiService', () => {
 
     service.consultar(CONSULTA_SISMOS_POR_DEFECTO).subscribe();
 
-    backend
-      .expectOne((r) => r.url === 'http://192.168.50.10/api/taxes/seismic-geojson')
-      .flush({});
+    backend.expectOne((r) => r.url === 'http://192.168.50.10/api/taxes/seismic-geojson').flush({});
   });
 
   it('propaga el 400 de validación del backend para que la vista lo muestre', async () => {

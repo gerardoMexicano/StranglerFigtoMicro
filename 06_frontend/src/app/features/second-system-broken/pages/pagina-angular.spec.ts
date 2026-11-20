@@ -75,7 +75,8 @@ describe('PaginaAngular (comparativa de sismos en .NET 10)', () => {
     vista().querySelector<HTMLInputElement>(`input[name="${nombre}"]`)!;
   const ejecutar = () =>
     [...vista().querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Ejecutar')!;
-  const mapa = () => fixture.debugElement.query(By.directive(MapaFalso)).componentInstance as MapaFalso;
+  const mapa = () =>
+    fixture.debugElement.query(By.directive(MapaFalso)).componentInstance as MapaFalso;
   const alerta = () => vista().querySelector('[role="alert"]')?.textContent ?? '';
 
   async function escribir(nombre: string, valor: string) {
@@ -121,8 +122,8 @@ describe('PaginaAngular (comparativa de sismos en .NET 10)', () => {
 
   it('deshabilita "Ejecutar" mientras espera la respuesta', async () => {
     const req = correr();
-    await fixture.whenStable().catch(() => undefined);
-    fixture.detectChanges();
+    // whenStable() esperaría a la petición pendiente: basta con pintar la vista
+    TestBed.tick();
 
     expect(ejecutar().disabled).toBe(true);
     req.flush(resultado());
