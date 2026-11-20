@@ -61,7 +61,7 @@ describe('Dashboard ejecutivo', () => {
     });
     backend = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(Dashboard);
-    await fixture.whenStable().catch(() => undefined);
+    // El dashboard pide datos al abrir: whenStable() esperaría esa petición, basta con pintar
     TestBed.tick();
   });
 
@@ -117,9 +117,7 @@ describe('Dashboard ejecutivo', () => {
   it('compara cada KPI contra el período anterior con flecha, diferencia y porcentaje', async () => {
     await responder();
 
-    expect(deltaKpi('ingresos').textContent?.trim()).toBe(
-      '▲ $200,000.00 (25.0%) vs período ant.',
-    );
+    expect(deltaKpi('ingresos').textContent?.trim()).toBe('▲ $200,000.00 (25.0%) vs período ant.');
     expect(deltaKpi('ingresos').classList).toContain('sube');
     expect(deltaKpi('margen').textContent?.trim()).toBe('▲ 1.40% (3.2%) vs período ant.');
     expect(deltaKpi('ordenes').textContent?.trim()).toBe('▼ 300 (20.0%) vs período ant.');
@@ -137,9 +135,7 @@ describe('Dashboard ejecutivo', () => {
       }),
     );
 
-    expect(deltaKpi('ingresos').textContent?.trim()).toBe(
-      '▲ $1,000,000.00 (0%) vs período ant.',
-    );
+    expect(deltaKpi('ingresos').textContent?.trim()).toBe('▲ $1,000,000.00 (0%) vs período ant.');
   });
 
   it('muestra ingresos brutos, impuestos y total por mes con el nombre del mes en español', async () => {
@@ -172,10 +168,7 @@ describe('Dashboard ejecutivo', () => {
     const categorias = [...seccion('Margen por categoría').querySelectorAll('li')].map((li) =>
       li.textContent?.replace(/\s+/g, ' ').trim(),
     );
-    expect(categorias).toEqual([
-      'Grupo 2 $300,000.00 (66.7%)',
-      'Grupo 7 $150,000.00 (33.3%)',
-    ]);
+    expect(categorias).toEqual(['Grupo 2 $300,000.00 (66.7%)', 'Grupo 7 $150,000.00 (33.3%)']);
   });
 
   it('marca en rojo a los vendedores con margen menor a 20 %', async () => {
@@ -227,9 +220,7 @@ describe('Dashboard ejecutivo', () => {
     await escribir('inicio', '2016-06-01');
 
     expect(aplicar().disabled).toBe(true);
-    expect(vista().querySelector('form [role="alert"]')?.textContent).toContain(
-      'anterior o igual',
-    );
+    expect(vista().querySelector('form [role="alert"]')?.textContent).toContain('anterior o igual');
     aplicar().click();
     TestBed.tick();
     expect(backend.match(() => true)).toHaveLength(0);

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -71,10 +71,12 @@ export interface DashboardEjecutivo {
 @Injectable({ providedIn: 'root' })
 export class DashboardApiService {
   private readonly http = inject(HttpClient);
-  private readonly apiBaseUrl = inject(APP_CONFIG).apiBaseUrl;
+  private readonly url = `${inject(APP_CONFIG).apiBaseUrl.replace(/\/+$/, '')}/dashboard/executive`;
 
-  consultar(_rango: RangoDashboard): Observable<DashboardEjecutivo> {
-    // Fase Red (TDD): contrato mínimo, la implementación llega tras aprobar las pruebas
-    throw new Error('Sin implementar');
+  consultar(rango: RangoDashboard): Observable<DashboardEjecutivo> {
+    const params = new HttpParams({
+      fromObject: { startDate: rango.startDate, endDate: rango.endDate },
+    });
+    return this.http.get<DashboardEjecutivo>(this.url, { params });
   }
 }

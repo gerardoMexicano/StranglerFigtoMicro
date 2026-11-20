@@ -82,9 +82,7 @@ describe('DashboardApiService', () => {
 
     service.consultar(RANGO_DASHBOARD_POR_DEFECTO).subscribe();
 
-    backend
-      .expectOne((r) => r.url === 'http://192.168.50.10/api/dashboard/executive')
-      .flush({});
+    backend.expectOne((r) => r.url === 'http://192.168.50.10/api/dashboard/executive').flush({});
   });
 
   it('propaga el 400 de validación del backend', async () => {
