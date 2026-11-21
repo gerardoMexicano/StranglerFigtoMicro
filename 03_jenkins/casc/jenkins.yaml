@@ -4,7 +4,8 @@ jenkins:
       allowsSignup: false
       users:
         - id: "admin"
-          password: "admin123"
+          # Se lee de la variable de entorno (definida en .env, ver .template.env.jenkins)
+          password: "${JENKINS_ADMIN_PASSWORD}"
 
   authorizationStrategy:
     loggedInUsersCanDoAnything:

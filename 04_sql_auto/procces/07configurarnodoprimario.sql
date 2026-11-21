@@ -18,7 +18,7 @@ ALTER ENDPOINT [Hadr_endpoint] STATE = STARTED;
 GO
 
 -- 2. Crear un login y usuario para el nodo secundario
-CREATE LOGIN login_secundario WITH PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE LOGIN login_secundario WITH PASSWORD = '$(AG_PASSWORD)';
 CREATE USER usr_secundario FOR LOGIN login_secundario;
 GO
 

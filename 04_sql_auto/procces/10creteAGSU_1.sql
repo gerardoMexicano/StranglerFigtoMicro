@@ -1,3 +1,3 @@
 --aplicar a ambos
-CREATE LOGIN AgAdmin WITH PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE LOGIN AgAdmin WITH PASSWORD = '$(AG_PASSWORD)';
 ALTER SERVER ROLE sysadmin ADD MEMBER AgAdmin;

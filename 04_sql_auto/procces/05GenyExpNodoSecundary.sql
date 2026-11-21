@@ -2,7 +2,7 @@ USE master;
 GO
 
 -- 1. Crear la llave maestra de la base de datos
-CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = '$(AG_PASSWORD)';
 GO
 
 -- 2. Crear el certificado de este motor

@@ -126,3 +126,5 @@ nomina/
 ejemplosxml/
 proyectogenfacnomi/*
 Extraccioncatalogos/*
+# Notas de despliegue locales (IPs, usuarios y rutas de mis máquinas)
+Deplegar/

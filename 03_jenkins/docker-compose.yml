@@ -5,6 +5,9 @@ services:
     build: .
     container_name: jenkins
     restart: unless-stopped
+    environment:
+      # JCasC interpola ${JENKINS_ADMIN_PASSWORD} en casc/jenkins.yaml
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD:?Define JENKINS_ADMIN_PASSWORD en .env (ver .template.env.jenkins)}
     user: root
     ports:
       - "${JENKINS_PORT}:8080"
