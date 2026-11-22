@@ -5,12 +5,12 @@ docker start sql-primary
 docker exec -u root -it sql-secondary //opt/mssql/bin/mssql-conf set hadr.hadrenabled 1
 docker stop sql-secondary
 docker start sql-secondary
-sqlcmd -S localhost,1443 -U sa -P "TuPasswordSuperSegura123!"
+sqlcmd -S localhost,1443 -U sa -P "$MSSQL_SA_PASSWORD" -v AG_PASSWORD="$AG_PASSWORD"
 USE master;
 GO
 
 -- 1. Crear la llave maestra de la base de datos (Master Key)
-CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = '$(AG_PASSWORD)';
 GO
 
 -- 2. Crear el certificado de este motor
@@ -22,12 +22,12 @@ GO
 BACKUP CERTIFICATE cert_nodo_primario
     TO FILE = '/backups/cert_primario.cer';
 GO
-sqlcmd -S localhost,1444 -U sa -P "TuPasswordSuperSegura123!"
+sqlcmd -S localhost,1444 -U sa -P "$MSSQL_SA_PASSWORD" -v AG_PASSWORD="$AG_PASSWORD"
 USE master;
 GO
 
 -- 1. Crear la llave maestra de la base de datos
-CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = '$(AG_PASSWORD)';
 GO
 
 -- 2. Crear el certificado de este motor
@@ -39,7 +39,7 @@ GO
 BACKUP CERTIFICATE cert_nodo_secundario
     TO FILE = '/backups/cert_secundario.cer';
 GO
-sqlcmd -S localhost,1443 -U sa -P "TuPasswordSuperSegura123!"
+sqlcmd -S localhost,1443 -U sa -P "$MSSQL_SA_PASSWORD" -v AG_PASSWORD="$AG_PASSWORD"
 -- Conéctate a tu nodo primario (puerto 1443) y ejecuta este script. Esto levantará su propio 
 -- endpoint y le dará permiso de entrada al secundario.
 USE master;
@@ -60,7 +60,7 @@ ALTER ENDPOINT [Hadr_endpoint] STATE = STARTED;
 GO
 
 -- 2. Crear un login y usuario para el nodo secundario
-CREATE LOGIN login_secundario WITH PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE LOGIN login_secundario WITH PASSWORD = '$(AG_PASSWORD)';
 CREATE USER usr_secundario FOR LOGIN login_secundario;
 GO
 
@@ -73,7 +73,7 @@ GO
 -- 4. Dar permiso al nodo secundario para conectarse al endpoint
 GRANT CONNECT ON ENDPOINT::[Hadr_endpoint] TO login_secundario;
 GO
-sqlcmd -S localhost,1444 -U sa -P "TuPasswordSuperSegura123!"
+sqlcmd -S localhost,1444 -U sa -P "$MSSQL_SA_PASSWORD" -v AG_PASSWORD="$AG_PASSWORD"
 --Levantará su endpoint con su certificado y dejará entrar al primario.
 
 USE master;
@@ -94,7 +94,7 @@ ALTER ENDPOINT [Hadr_endpoint] STATE = STARTED;
 GO
 
 -- 2. Crear un login y usuario para el nodo primario
-CREATE LOGIN login_primario WITH PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE LOGIN login_primario WITH PASSWORD = '$(AG_PASSWORD)';
 CREATE USER usr_primario FOR LOGIN login_primario;
 GO
 
@@ -107,9 +107,9 @@ GO
 -- 4. Dar permiso al nodo primario para conectarse al endpoint
 GRANT CONNECT ON ENDPOINT::[Hadr_endpoint] TO login_primario;
 GO
-sqlcmd -S localhost,1443 -U sa -P "TuPasswordSuperSegura123!"
+sqlcmd -S localhost,1443 -U sa -P "$MSSQL_SA_PASSWORD" -v AG_PASSWORD="$AG_PASSWORD"
 --aplicar a ambos
-CREATE LOGIN AgAdmin WITH PASSWORD = 'TuPasswordSuperSegura123!';
+CREATE LOGIN AgAdmin WITH PASSWORD = '$(AG_PASSWORD)';
 ALTER SERVER ROLE sysadmin ADD MEMBER AgAdmin;
 -- CONTAINED: La cláusula que le dice a SQL que cree las bases de datos de sistema aisladas.
 -- CLUSTER_TYPE = NONE: Le indica que no busque un clúster de Windows (WSFC) ni de Linux (Pacemaker) para gestionar la infraestructura.
@@ -138,7 +138,7 @@ N'sql-secondary' WITH
     SEEDING_MODE = AUTOMATIC
 );
 GO
-sqlcmd -S localhost,1444 -U sa -P "TuPasswordSuperSegura123!"
+sqlcmd -S localhost,1444 -U sa -P "$MSSQL_SA_PASSWORD" -v AG_PASSWORD="$AG_PASSWORD"
 USE master;
 GO
 

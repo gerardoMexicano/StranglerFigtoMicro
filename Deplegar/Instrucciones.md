@@ -1,1 +1,0 @@
-bueno esto es simple al ser la primera version y solo en teoria existir el codigo . net framework tienes que desplegar en una maquina windows un servidor web con IIS configurado y ejecutar el proyecto que te diviertas  la idea  pues es mostrar los inconvenientes de un sistema legado en comparacion a uno moderno. 
